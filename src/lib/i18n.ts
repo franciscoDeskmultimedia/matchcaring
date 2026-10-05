@@ -13,21 +13,21 @@ export const DICTIONARY = {
     language: "Language",
 
     // Home
-    heroTag: "Specialized Recruitment for 3-Year-Old Toddler Care",
-    heroTitle: "Hire with Confidence: Diagnose Nanny Psyche & Safety Before They Enter Your Home",
-    heroDesc: "A 3-year-old child demands exceptional emotional patience, instinctual choking/water vigilance, and non-punitive guidance. Send candidate test links and get clinical psychometric scorecards instantly.",
+    heroTag: "Comprehensive Caregiver Diagnostics: Children • Elderly • Disability & Special Needs",
+    heroTitle: "Hire with Confidence: Diagnose Caregiver Psyche, Safety & Ethics Before They Enter Your Home",
+    heroDesc: "Whether caring for energetic children, offering companion care for elderly relatives, or providing dedicated assistance for individuals with disabilities. Send clinical psychometric assessments and get instant safety and compatibility scorecards.",
     openDashboard: "Open Recruitment Dashboard",
-    tryDemo: "Try Free Demo (Instant Access)",
+    tryDemo: "Get Started",
     createAccount: "Create Family Account",
-    aapProtocol: "AAP Pediatric Choking Protocol",
-    emotionalRegulation: "Emotional Regulation & Non-Violence",
-    inPersonProbes: "Personalized In-Person Probes",
+    aapProtocol: "Pediatric & Geriatric Protocols",
+    emotionalRegulation: "Emotional Regulation & Empathy",
+    inPersonProbes: "Personalized Interview Questions",
 
     // Steps
     step1Title: "Generate Unique Assessment Link",
-    step1Desc: "Enter candidate name and target role. Get a shareable link ready to send via WhatsApp or Email.",
-    step2Title: "Candidate Takes 10-Min Test",
-    step2Desc: "The nanny answers real-world toddler dilemmas on their smartphone: food refusal, grocery store tantrums, bath safety, and phone boundaries.",
+    step1Desc: "Select the care category (childcare, elderly, or disability), enter candidate name and role. Get a shareable link ready to send via WhatsApp or Email.",
+    step2Title: "Candidate Takes 10-Min Scenario Test",
+    step2Desc: "The caregiver answers real-world dilemmas on their smartphone: patience during crises, medication vigilance, safety emergencies, and smartphone ethics.",
     step3Title: "Instant Diagnostic Scorecard & Red Flags",
     step3Desc: "View Overall Fit Index, dimensional scores, critical safety red flag alerts, and a tailored in-person interview question guide.",
 
@@ -281,21 +281,21 @@ export const DICTIONARY = {
     language: "Idioma",
 
     // Home
-    heroTag: "Reclutamiento Especializado para el Cuidado de Niños de 3 Años",
-    heroTitle: "Contrata con Confianza: Evalúa la Psicología y Seguridad de tu Niñera Antes de Abrirle tu Hogar",
-    heroDesc: "Un niño de 3 años exige paciencia emocional superior, reflejos inmediatos de primeros auxilios (asfixia/agua) y disciplina no punitiva. Envía el enlace de evaluación y obtén fichas diagnósticas al instante.",
+    heroTag: "Plataforma Integral de Diagnóstico: Niños • Adultos Mayores • Discapacidad y Necesidades Especiales",
+    heroTitle: "Contrata con Confianza: Evalúa la Psicología, Seguridad y Ética de tus Cuidadores Antes de Abrirles tu Hogar",
+    heroDesc: "Ya sea para el cuidado activo de niños, compañía y asistencia a adultos mayores, o soporte especializado en discapacidad y neurodiversidad. Envía evaluaciones psicométricas y obtén fichas diagnósticas clínicas y alertas de riesgo al instante.",
     openDashboard: "Abrir Panel de Reclutamiento",
-    tryDemo: "Probar Demo Gratis (Acceso Instantáneo)",
+    tryDemo: "Comenzar Ahora",
     createAccount: "Crear Cuenta Familiar",
-    aapProtocol: "Protocolo de Asfixia Pediátrica AAP",
-    emotionalRegulation: "Regulación Emocional y Cero Violencia",
-    inPersonProbes: "Preguntas Personalizadas para la Entrevista",
+    aapProtocol: "Protocolos Pediátricos y Geriátricos",
+    emotionalRegulation: "Regulación Emocional y Empatía",
+    inPersonProbes: "Guía de Preguntas para Entrevista",
 
     // Steps
     step1Title: "Genera un Enlace Único de Evaluación",
-    step1Desc: "Ingresa el nombre de la candidata y el puesto. Obtén un enlace listo para compartir por WhatsApp o Correo.",
+    step1Desc: "Selecciona el perfil de cuidado (infantil, adulto mayor o discapacidad), nombre y puesto. Obtén un enlace listo para compartir por WhatsApp o Correo.",
     step2Title: "La Candidata Realiza el Test (10 Minutos)",
-    step2Desc: "La niñera responde dilemas reales en su celular: rechazo de comida, berrinches en el parque, seguridad en la bañera y límites con el celular.",
+    step2Desc: "La cuidadora responde dilemas reales en su celular: paciencia ante crisis, adherencia a medicación, emergencias y límites con el celular.",
     step3Title: "Ficha Diagnóstica y Alertas de Riesgo Instantáneas",
     step3Desc: "Visualiza el Índice de Compatibilidad, desglose por dimensiones, alertas críticas de seguridad y una guía de preguntas para la entrevista presencial.",
 

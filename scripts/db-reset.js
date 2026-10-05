@@ -44,28 +44,6 @@ const SUPER_ADMIN_USER = {
   }
 };
 
-const DEMO_PARENT_USER = {
-  id: "usr_parent_demo",
-  email: "parent@example.com",
-  name: "Familia Demo",
-  passwordHash: "$2b$10$lokWWpTwak2ioXXiBelMt.PysQgO8oz3s2sLYtyh.SaOdFdtj.2Wq", // password123
-  role: "parent",
-  createdAt: new Date().toISOString(),
-  children: [
-    {
-      id: "child_demo_leo",
-      name: "Leo",
-      age: 3,
-      notes: "Niño de 3 años."
-    }
-  ],
-  childProfile: {
-    name: "Leo",
-    age: 3,
-    notes: "Niño de 3 años."
-  }
-};
-
 // Check for connection string
 let connectionString = process.env.POSTGRES_URL || process.env.DATABASE_URL;
 for (const arg of process.argv.slice(2)) {
@@ -112,7 +90,7 @@ async function resetLocalDatabase() {
   }
 
   const cleanDb = {
-    users: [SUPER_ADMIN_USER, DEMO_PARENT_USER],
+    users: [SUPER_ADMIN_USER],
     candidates: [], // 0 candidates! Starting from scratch
     parentCampaigns: [
       {
@@ -211,7 +189,10 @@ async function resetPostgresDatabase() {
     await client.query('UPDATE ad_campaigns SET impressions = 0, clicks = 0;');
     console.log('   ✓ Métricas publicitarias reiniciadas a 0 impresiones y 0 clics.');
 
-    // 5. Preservar o recrear el Super Admin
+    // 5. Eliminar usuarios demo o temporales (mantener solo Super Admin)
+    await client.query("DELETE FROM users WHERE role != 'admin' AND email != $1;", [SUPER_ADMIN_USER.email]);
+
+    // 6. Preservar o recrear el Super Admin
     await client.query(
       `INSERT INTO users (id, email, name, password_hash, role, children, child_profile, created_at)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
@@ -263,9 +244,6 @@ async function main() {
   console.log(` • Email:        ${SUPER_ADMIN_USER.email}`);
   console.log(` • Contraseña:   Phoebe2016.`);
   console.log(` • Rol:          ADMIN (Acceso total en /admin y /dashboard)`);
-  console.log('\nCredenciales de Familia Demo:');
-  console.log(` • Email:        ${DEMO_PARENT_USER.email}`);
-  console.log(` • Contraseña:   password123`);
   console.log('========================================================================\n');
 }
 

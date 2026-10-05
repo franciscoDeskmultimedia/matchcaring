@@ -5,10 +5,7 @@ import { getAllCandidates, getAllUsers, getAdCampaigns, getNannyTalentPool } fro
 export async function GET() {
   const user = await getCurrentUser();
   if (!user || user.role !== "admin") {
-    // For demo convenience, allow access if user is usr_parent_demo
-    if (user?.id !== "usr_parent_demo" && user?.email !== "parent@example.com") {
-      return NextResponse.json({ error: "Unauthorized: Admin access required" }, { status: 403 });
-    }
+    return NextResponse.json({ error: "Unauthorized: Admin access required" }, { status: 403 });
   }
 
   const [users, candidates, talentPool, adCampaigns] = await Promise.all([

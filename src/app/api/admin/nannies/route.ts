@@ -5,9 +5,7 @@ import { getNannyTalentPool, updateCandidateTalentPool } from "@/lib/db";
 export async function GET() {
   const user = await getCurrentUser();
   if (!user || user.role !== "admin") {
-    if (user?.id !== "usr_parent_demo" && user?.email !== "parent@example.com") {
-      return NextResponse.json({ error: "Unauthorized: Admin access required" }, { status: 403 });
-    }
+    return NextResponse.json({ error: "Unauthorized: Admin access required" }, { status: 403 });
   }
 
   const pool = await getNannyTalentPool();
@@ -17,9 +15,7 @@ export async function GET() {
 export async function PATCH(req: NextRequest) {
   const user = await getCurrentUser();
   if (!user || user.role !== "admin") {
-    if (user?.id !== "usr_parent_demo" && user?.email !== "parent@example.com") {
-      return NextResponse.json({ error: "Unauthorized: Admin access required" }, { status: 403 });
-    }
+    return NextResponse.json({ error: "Unauthorized: Admin access required" }, { status: 403 });
   }
 
   try {

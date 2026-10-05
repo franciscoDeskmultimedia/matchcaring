@@ -213,7 +213,7 @@ POSTGRES_URL="postgres://usuario:pass@ep-xyz.neon.tech/neondb?sslmode=require" n
 | Rol | Correo Electrónico | Contraseña | Rutas de Acceso |
 |---|---|---|---|
 | **Super Admin** | `francisco.deskmultimedia@gmail.com` | `Phoebe2016.` | `/admin` (Monetización, Anuncios, Afiliados, Estadísticas) y `/dashboard` |
-| **Familia Demo** | `parent@example.com` | `password123` | `/dashboard` (Selección de Cuidados y Candidatas) |
+| **Familias / Nuevos Usuarios** | *(Registran su propia cuenta)* | *(Definida por el usuario)* | `/dashboard` (Selección de Cuidados y Candidatas) |
 
 ---
 

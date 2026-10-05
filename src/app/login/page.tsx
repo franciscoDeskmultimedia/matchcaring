@@ -82,31 +82,6 @@ export default function LoginPage() {
     }
   };
 
-  const fillDemoCredentials = async () => {
-    setEmail("parent@example.com");
-    setPassword("password123");
-    setIsRegister(false);
-    setLoading(true);
-    setError(null);
-
-    try {
-      const res = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: "parent@example.com", password: "password123" }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed demo login");
-
-      router.push("/dashboard");
-      router.refresh();
-    } catch (err: any) {
-      setError(err.message);
-      setLoading(false);
-    }
-  };
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-sky-50/40 to-indigo-50/30 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       {/* Top Language Toggle */}
@@ -130,24 +105,6 @@ export default function LoginPage() {
       {/* Main Card */}
       <div className="mt-6 sm:mx-auto sm:w-full sm:max-w-md px-4 sm:px-0">
         <div className="bg-white/95 backdrop-blur-md py-8 px-6 sm:px-10 shadow-xl shadow-slate-200/50 rounded-2xl border border-slate-200/80">
-          {/* Quick Demo Login Pill */}
-          <div className="mb-6 p-3 rounded-xl bg-sky-50 border border-sky-200/80 flex items-center justify-between gap-2">
-            <div className="text-xs text-sky-900">
-              <span className="font-bold flex items-center gap-1">
-                <Sparkles className="w-3.5 h-3.5 text-sky-600" />
-                {t.quickTestDrive}
-              </span>
-              <span className="text-[11px] text-sky-700">parent@example.com &bull; pass: password123</span>
-            </div>
-            <button
-              type="button"
-              onClick={fillDemoCredentials}
-              disabled={loading}
-              className="px-3 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold shrink-0 shadow-xs transition-colors"
-            >
-              {t.oneClickLogin}
-            </button>
-          </div>
 
           {/* Tab Selector */}
           <div className="flex border-b border-slate-200 mb-6">
@@ -252,7 +209,7 @@ export default function LoginPage() {
                 <input
                   type="email"
                   required
-                  placeholder="parent@example.com"
+                  placeholder="name@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="w-full pl-9 pr-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent outline-none"

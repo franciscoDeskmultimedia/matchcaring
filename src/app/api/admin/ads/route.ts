@@ -5,9 +5,7 @@ import { createAdCampaign, deleteAdCampaign, getAdCampaigns, updateAdCampaign } 
 export async function GET() {
   const user = await getCurrentUser();
   if (!user || user.role !== "admin") {
-    if (user?.id !== "usr_parent_demo" && user?.email !== "parent@example.com") {
-      return NextResponse.json({ error: "Unauthorized: Admin access required" }, { status: 403 });
-    }
+    return NextResponse.json({ error: "Unauthorized: Admin access required" }, { status: 403 });
   }
 
   const ads = await getAdCampaigns();
@@ -17,9 +15,7 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   const user = await getCurrentUser();
   if (!user || user.role !== "admin") {
-    if (user?.id !== "usr_parent_demo" && user?.email !== "parent@example.com") {
-      return NextResponse.json({ error: "Unauthorized: Admin access required" }, { status: 403 });
-    }
+    return NextResponse.json({ error: "Unauthorized: Admin access required" }, { status: 403 });
   }
 
   try {
@@ -55,9 +51,7 @@ export async function POST(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
   const user = await getCurrentUser();
   if (!user || user.role !== "admin") {
-    if (user?.id !== "usr_parent_demo" && user?.email !== "parent@example.com") {
-      return NextResponse.json({ error: "Unauthorized: Admin access required" }, { status: 403 });
-    }
+    return NextResponse.json({ error: "Unauthorized: Admin access required" }, { status: 403 });
   }
 
   try {
@@ -80,9 +74,7 @@ export async function PATCH(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
   const user = await getCurrentUser();
   if (!user || user.role !== "admin") {
-    if (user?.id !== "usr_parent_demo" && user?.email !== "parent@example.com") {
-      return NextResponse.json({ error: "Unauthorized: Admin access required" }, { status: 403 });
-    }
+    return NextResponse.json({ error: "Unauthorized: Admin access required" }, { status: 403 });
   }
 
   const { searchParams } = new URL(req.url);

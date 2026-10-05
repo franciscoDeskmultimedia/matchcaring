@@ -268,11 +268,13 @@ function loadDatabase(): DatabaseSchema {
       changed = true;
     }
 
-    // Ensure demo user has admin or parent role
-    const demoUser = db.users?.find((u) => u.id === "usr_parent_demo" || u.email === "parent@example.com");
-    if (demoUser && demoUser.role !== "admin") {
-      demoUser.role = "admin";
-      changed = true;
+    // Ensure demo user is permanently removed from local database
+    if (db.users) {
+      const filteredUsers = db.users.filter((u) => u.id !== "usr_parent_demo" && u.email !== "parent@example.com");
+      if (filteredUsers.length !== db.users.length) {
+        db.users = filteredUsers;
+        changed = true;
+      }
     }
 
     if (changed) {
@@ -321,197 +323,9 @@ function seedInitialData(): DatabaseSchema {
     },
   };
 
-  const defaultPasswordHash = bcrypt.hashSync("password123", 10);
-  const demoUserId = "usr_parent_demo";
-
-  const defaultUser: User = {
-    id: demoUserId,
-    email: "parent@example.com",
-    name: "Francisco Cornejo (Demo)",
-    passwordHash: defaultPasswordHash,
-    role: "admin",
-    createdAt: new Date().toISOString(),
-    children: [
-      {
-        id: "child_leo_01",
-        name: "Leo",
-        age: 3,
-        notes: "Active 3-year-old son. Enjoys park walks, drawing, building blocks, and sensory sand. Working on emotional regulation during transitions.",
-      },
-      {
-        id: "child_mateo_02",
-        name: "Mateo",
-        age: 1,
-        notes: "1-year-old crawling infant brother. Curious oral explorer, teething, requires vigilant choking prevention and bath safety.",
-      },
-    ],
-    childProfile: {
-      name: "Leo",
-      age: 3,
-      notes: "Active 3-year-old son. Enjoys park walks, drawing, building blocks, and sensory sand. Working on emotional regulation during transitions.",
-    },
-  };
-
-  // Sample Response 1: Maria Gonzalez (High score / Exceptional)
-  const mariaResponses: CandidateResponse[] = [
-    { questionId: "psy_01_frustration", selectedOptionId: "psy_01_a" },
-    { questionId: "psy_02_tantrum_public", selectedOptionId: "psy_02_a" },
-    { questionId: "psy_03_repetitive_stress", selectedOptionId: "psy_03_a" },
-    { questionId: "safe_01_choking_prevention", selectedOptionId: "safe_01_a" },
-    { questionId: "safe_02_water_safety", selectedOptionId: "safe_02_a" },
-    { questionId: "safe_03_head_injury", selectedOptionId: "safe_03_a" },
-    { questionId: "dev_01_potty_accident", selectedOptionId: "dev_01_a" },
-    { questionId: "dev_02_screen_time_play", selectedOptionId: "dev_02_a" },
-    { questionId: "dev_03_hitting_defiance", selectedOptionId: "dev_03_a" },
-    { questionId: "eth_01_smartphone_policy", selectedOptionId: "eth_01_a" },
-    { questionId: "eth_02_discipline_alignment", selectedOptionId: "eth_02_a" },
-    { questionId: "sit_01_allergic_reaction", selectedOptionId: "sit_01_a" },
-    { questionId: "sit_02_playground_stranger", selectedOptionId: "sit_02_a" },
-  ];
-  const mariaResult = evaluateAssessment(mariaResponses);
-
-  // Sample Response 2: Sarah Jenkins (Moderate / Phone watchout)
-  const sarahResponses: CandidateResponse[] = [
-    { questionId: "psy_01_frustration", selectedOptionId: "psy_01_b" },
-    { questionId: "psy_02_tantrum_public", selectedOptionId: "psy_02_b" },
-    { questionId: "psy_03_repetitive_stress", selectedOptionId: "psy_03_b" },
-    { questionId: "safe_01_choking_prevention", selectedOptionId: "safe_01_a" },
-    { questionId: "safe_02_water_safety", selectedOptionId: "safe_02_a" },
-    { questionId: "safe_03_head_injury", selectedOptionId: "safe_03_a" },
-    { questionId: "dev_01_potty_accident", selectedOptionId: "dev_01_a" },
-    { questionId: "dev_02_screen_time_play", selectedOptionId: "dev_02_d" },
-    { questionId: "dev_03_hitting_defiance", selectedOptionId: "dev_03_a" },
-    { questionId: "eth_01_smartphone_policy", selectedOptionId: "eth_01_b" },
-    { questionId: "eth_02_discipline_alignment", selectedOptionId: "eth_02_a" },
-    { questionId: "sit_01_allergic_reaction", selectedOptionId: "sit_01_a" },
-    { questionId: "sit_02_playground_stranger", selectedOptionId: "sit_02_a" },
-  ];
-  const sarahResult = evaluateAssessment(sarahResponses);
-
-  // Sample Response 3: Elena Vance (High Risk / Physical discipline & Water safety red flags)
-  const elenaResponses: CandidateResponse[] = [
-    { questionId: "psy_01_frustration", selectedOptionId: "psy_01_d" },
-    { questionId: "psy_02_tantrum_public", selectedOptionId: "psy_02_c" },
-    { questionId: "psy_03_repetitive_stress", selectedOptionId: "psy_03_d" },
-    { questionId: "safe_01_choking_prevention", selectedOptionId: "safe_01_b" },
-    { questionId: "safe_02_water_safety", selectedOptionId: "safe_02_b" },
-    { questionId: "safe_03_head_injury", selectedOptionId: "safe_03_b" },
-    { questionId: "dev_01_potty_accident", selectedOptionId: "dev_01_c" },
-    { questionId: "dev_02_screen_time_play", selectedOptionId: "dev_02_b" },
-    { questionId: "dev_03_hitting_defiance", selectedOptionId: "dev_03_b" },
-    { questionId: "eth_01_smartphone_policy", selectedOptionId: "eth_01_c" },
-    { questionId: "eth_02_discipline_alignment", selectedOptionId: "eth_02_b" },
-    { questionId: "sit_01_allergic_reaction", selectedOptionId: "sit_01_d" },
-    { questionId: "sit_02_playground_stranger", selectedOptionId: "sit_02_b" },
-  ];
-  const elenaResult = evaluateAssessment(elenaResponses);
-
-  const initialCandidates: Candidate[] = [
-    {
-      id: "cand_maria_01",
-      userId: demoUserId,
-      token: "tok_maria_g_8841",
-      name: "Maria Gonzalez",
-      roleTarget: "Full-Time Nanny for 3yo Leo",
-      phone: "+1 (555) 234-5678",
-      email: "maria.gonzalez.care@example.com",
-      status: "completed",
-      createdAt: new Date(Date.now() - 3 * 86400000).toISOString(),
-      updatedAt: new Date(Date.now() - 2 * 86400000).toISOString(),
-      profile: {
-        fullName: "Maria Gonzalez",
-        phone: "+1 (555) 234-5678",
-        email: "maria.gonzalez.care@example.com",
-        yearsOfExperience: 6,
-        hasCprCertification: true,
-        cprExpirationDate: "2027-04-15",
-        hasEarlyChildhoodEducation: true,
-        highestEducation: "Associate Degree in Early Childhood Development",
-        authorizedToWork: true,
-        availableStartDate: "2026-10-15",
-        preferredHourlyRate: "$28 - $32 / hr",
-        personalStatement:
-          "Passionate early childhood specialist with 6+ years supporting toddlers through developmental leaps, potty training, sensory exploration, and emotional co-regulation.",
-      },
-      responses: mariaResponses,
-      result: mariaResult,
-      parentNotes: "Top pick! Excellent instincts on food refusal and zero hesitation on pediatric choking. Schedule in-person play trial.",
-    },
-    {
-      id: "cand_sarah_02",
-      userId: demoUserId,
-      token: "tok_sarah_j_5521",
-      name: "Sarah Jenkins",
-      roleTarget: "Full-Time Nanny for 3yo Leo",
-      phone: "+1 (555) 345-6789",
-      email: "sarah.jenkins@example.com",
-      status: "completed",
-      createdAt: new Date(Date.now() - 5 * 86400000).toISOString(),
-      updatedAt: new Date(Date.now() - 4 * 86400000).toISOString(),
-      profile: {
-        fullName: "Sarah Jenkins",
-        phone: "+1 (555) 345-6789",
-        email: "sarah.jenkins@example.com",
-        yearsOfExperience: 3,
-        hasCprCertification: true,
-        cprExpirationDate: "2026-11-20",
-        hasEarlyChildhoodEducation: false,
-        highestEducation: "High School Diploma & 40hr Childcare Workshop",
-        authorizedToWork: true,
-        availableStartDate: "2026-10-20",
-        preferredHourlyRate: "$24 / hr",
-        personalStatement: "Energetic babysitter who loves outdoor activities and arts & crafts.",
-      },
-      responses: sarahResponses,
-      result: sarahResult,
-      parentNotes: "Need to probe on phone boundaries and handling public tantrums without giving in with bribes.",
-    },
-    {
-      id: "cand_elena_03",
-      userId: demoUserId,
-      token: "tok_elena_v_1192",
-      name: "Elena Vance",
-      roleTarget: "Full-Time Nanny for 3yo Leo",
-      phone: "+1 (555) 876-5432",
-      email: "elena.vance@example.com",
-      status: "completed",
-      createdAt: new Date(Date.now() - 6 * 86400000).toISOString(),
-      updatedAt: new Date(Date.now() - 6 * 86400000).toISOString(),
-      profile: {
-        fullName: "Elena Vance",
-        phone: "+1 (555) 876-5432",
-        email: "elena.vance@example.com",
-        yearsOfExperience: 2,
-        hasCprCertification: false,
-        hasEarlyChildhoodEducation: false,
-        highestEducation: "High School",
-        authorizedToWork: true,
-        availableStartDate: "Immediate",
-        preferredHourlyRate: "$20 / hr",
-        personalStatement: "Available for full time childcare.",
-      },
-      responses: elenaResponses,
-      result: elenaResult,
-      parentNotes: "DO NOT HIRE. Multiple critical red flags (swatting hands, leaving child in bath for package, hiding head injury).",
-    },
-    {
-      id: "cand_sofia_04",
-      userId: demoUserId,
-      token: "tok_sofia_m_9930",
-      name: "Sofia Martinez",
-      roleTarget: "Full-Time Nanny for 3yo Leo",
-      phone: "+1 (555) 432-1098",
-      email: "sofia.martinez@example.com",
-      status: "invited",
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      parentNotes: "Referred by neighbor Laura. Sent test link today.",
-    },
-  ];
-
   return {
-    users: [superAdminUser, defaultUser],
-    candidates: initialCandidates,
+    users: [superAdminUser],
+    candidates: [],
   };
 }
 

@@ -26,27 +26,6 @@
         "age": 3,
         "notes": "Hijo de 3 años. Le encantan los paseos en el parque, bloques de construcción y cuentos ilustrados."
       }
-    },
-    {
-      "id": "usr_parent_demo",
-      "email": "parent@example.com",
-      "name": "Familia Demo",
-      "passwordHash": "$2b$10$lokWWpTwak2ioXXiBelMt.PysQgO8oz3s2sLYtyh.SaOdFdtj.2Wq",
-      "role": "admin",
-      "createdAt": "2026-10-05T02:08:14.356Z",
-      "children": [
-        {
-          "id": "child_demo_leo",
-          "name": "Leo",
-          "age": 3,
-          "notes": "Niño de 3 años."
-        }
-      ],
-      "childProfile": {
-        "name": "Leo",
-        "age": 3,
-        "notes": "Niño de 3 años."
-      }
     }
   ],
   "candidates": [],
