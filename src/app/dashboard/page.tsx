@@ -99,7 +99,8 @@ export default function DashboardPage() {
     try {
       const userRes = await fetch("/api/auth/me");
       if (!userRes.ok) {
-        router.push("/login");
+        const returnUrl = typeof window !== "undefined" ? window.location.pathname + window.location.search : "/dashboard";
+        router.push(`/login?redirect=${encodeURIComponent(returnUrl)}`);
         return;
       }
       const userData = await userRes.json();
@@ -153,9 +154,8 @@ export default function DashboardPage() {
 
   const handleCopyCampaignLink = (campaign: ParentCampaign) => {
     const origin = typeof window !== "undefined" ? window.location.origin : "";
-    const link = campaign.publicToken
-      ? `${origin}/test/${campaign.publicToken}`
-      : `${origin}/dashboard/new?campaignId=${campaign.id}`;
+    const code = campaign.shareCode || campaign.id;
+    const link = `${origin}/dashboard?joinCode=${encodeURIComponent(code)}`;
     navigator.clipboard.writeText(link);
     setCopiedCampaignId(campaign.id);
     setTimeout(() => setCopiedCampaignId(null), 2000);
@@ -876,44 +876,58 @@ export default function DashboardPage() {
                         )}
                       </button>
 
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleCopyCampaignLink(camp);
-                          }}
-                          className="flex-1 py-2 px-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs transition-all flex items-center justify-center gap-1.5 shadow-xs cursor-pointer"
-                        >
-                          <Copy className="w-3.5 h-3.5" />
-                          <span>
-                            {copiedCampaignId === camp.id
-                              ? language === "es" ? "¡Copiado!" : "Copied!"
-                              : language === "es" ? "Enlace" : "Link"}
-                          </span>
-                        </button>
-
+                      {/* Action Buttons Row */}
+                      <div className="grid grid-cols-2 gap-2">
                         <button
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
                             setShareCampaign(camp);
                           }}
-                          className="py-2 px-2.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 font-bold text-xs transition-all flex items-center justify-center gap-1 cursor-pointer"
-                          title={language === "es" ? "Compartir esta campaña con otro usuario" : "Share this campaign with another user"}
+                          className="py-2.5 px-3 rounded-xl bg-purple-50 hover:bg-purple-100 border border-purple-200 text-purple-900 font-bold text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs group/share"
+                          title={language === "es" ? "Compartir esta campaña con tu pareja o familiar para que también la vea en su cuenta" : "Share this campaign with your spouse or family member so it appears in their account"}
                         >
-                          <Share2 className="w-3.5 h-3.5 text-indigo-600" />
-                          <span>{language === "es" ? "Compartir" : "Share"}</span>
+                          <Share2 className="w-3.5 h-3.5 text-purple-600 group-hover/share:scale-110 transition-transform" />
+                          <span>{language === "es" ? "Compartir Campaña" : "Share Campaign"}</span>
                         </button>
 
                         <Link
                           href={`/dashboard/new?campaignId=${camp.id}`}
                           onClick={(e) => e.stopPropagation()}
-                          className="py-2 px-2.5 rounded-xl bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200 font-bold text-xs transition-all flex items-center justify-center gap-1 cursor-pointer"
-                          title={language === "es" ? "Invitar candidata a esta campaña" : "Invite candidate to this campaign"}
+                          className="py-2.5 px-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs"
+                          title={language === "es" ? "Crear o enviar prueba a una nueva postulante para esta campaña" : "Invite or screen a candidate for this campaign"}
                         >
-                          <UserPlus className="w-3.5 h-3.5" />
-                          <span>{language === "es" ? "Invitar" : "Invite"}</span>
+                          <UserPlus className="w-3.5 h-3.5 text-sky-400" />
+                          <span>{language === "es" ? "+ Evaluar Candidata" : "+ Evaluate Candidate"}</span>
                         </Link>
+                      </div>
+
+                      {/* Quick Share Code & Link Bar */}
+                      <div className="flex items-center justify-between text-[11px] bg-slate-50 px-3 py-2 rounded-xl border border-slate-200/80">
+                        <div className="flex items-center gap-1.5 truncate mr-2">
+                          <span className="text-slate-500 font-medium">
+                            {language === "es" ? "Código:" : "Code:"}
+                          </span>
+                          <span className="font-mono font-bold text-slate-800 bg-white px-1.5 py-0.5 rounded border border-slate-200 text-[10px]">
+                            {camp.shareCode || camp.id}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleCopyCampaignLink(camp);
+                          }}
+                          className="font-bold text-purple-700 hover:text-purple-900 flex items-center gap-1 cursor-pointer shrink-0 transition-colors"
+                          title={language === "es" ? "Copiar enlace de acceso para otro usuario/familiar" : "Copy collaboration access link"}
+                        >
+                          <Copy className="w-3 h-3 text-purple-600" />
+                          <span>
+                            {copiedCampaignId === camp.id
+                              ? language === "es" ? "¡Enlace Copiado!" : "Link Copied!"
+                              : language === "es" ? "Copiar Enlace" : "Copy Link"}
+                          </span>
+                        </button>
                       </div>
                     </div>
                   </div>

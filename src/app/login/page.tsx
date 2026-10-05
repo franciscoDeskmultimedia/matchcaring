@@ -40,7 +40,10 @@ export default function LoginPage() {
         throw new Error(data.error || "Failed to log in.");
       }
 
-      router.push("/dashboard");
+      const params = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
+      const redirectUrl = params?.get("redirect") || "/dashboard";
+
+      router.push(redirectUrl);
       router.refresh();
     } catch (err: any) {
       setError(err.message || "An error occurred.");
@@ -73,7 +76,10 @@ export default function LoginPage() {
         throw new Error(data.error || "Failed to create account.");
       }
 
-      router.push("/dashboard");
+      const params = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
+      const redirectUrl = params?.get("redirect") || "/dashboard";
+
+      router.push(redirectUrl);
       router.refresh();
     } catch (err: any) {
       setError(err.message || "An error occurred.");
