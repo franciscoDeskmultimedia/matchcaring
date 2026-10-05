@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0284c7" />
+      <stop offset="50%" stop-color="#2563eb" />
+      <stop offset="100%" stop-color="#4f46e5" />
+    </linearGradient>
+    <linearGradient id="heartGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="100%" stop-color="#f0f9ff" />
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="#0f172a" flood-opacity="0.3" />
+    </filter>
+  </defs>
+
+  <!-- Background Squircle -->
+  <rect width="512" height="512" rx="128" fill="url(#bgGrad)" />
+
+  <!-- Inner Soft Glow -->
+  <circle cx="256" cy="180" r="140" fill="#38bdf8" opacity="0.25" />
+
+  <!-- Caring Emblem (Stylized Heart & Supportive Hands) -->
+  <g filter="url(#shadow)" transform="translate(0, 8)">
+    <path
+      d="M256 400 C256 400 110 300 110 200 C110 140 156 96 216 96 C242 96 266 108 280 128 C294 108 318 96 344 96 C404 96 450 140 450 200 C450 300 256 400 256 400 Z"
+      fill="url(#heartGrad)"
+    />
+
+    <path
+      d="M216 136 C176 136 146 166 146 206 C146 264 210 326 256 364 C240 330 220 280 220 236 C220 190 238 160 252 144 C242 138 230 136 216 136 Z"
+      fill="#0284c7"
+      opacity="0.9"
+    />
+
+    <path
+      d="M344 136 C330 136 318 138 308 144 C322 160 340 190 340 236 C340 280 320 330 304 364 C350 326 414 264 414 206 C414 166 384 136 344 136 Z"
+      fill="#4f46e5"
+      opacity="0.9"
+    />
+
+    <path
+      d="M280 200 C280 224 294 238 318 238 C294 238 280 252 280 276 C280 252 266 238 242 238 C266 238 280 224 280 200 Z"
+      fill="#0ea5e9"
+    />
+  </g>
+</svg>

@@ -1,0 +1,183 @@
+{
+  "users": [
+    {
+      "id": "usr_admin_francisco",
+      "email": "francisco.deskmultimedia@gmail.com",
+      "name": "Francisco Cornejo",
+      "passwordHash": "$2b$10$fDyFDE6hnr.kBcVhTNgIqeGGhPth7uDIrE7g5oxLkgsZizLjauJTO",
+      "role": "admin",
+      "createdAt": "2026-10-05T02:08:14.355Z",
+      "children": [
+        {
+          "id": "child_leo_01",
+          "name": "Leo",
+          "age": 3,
+          "notes": "Hijo de 3 años. Le encantan los paseos en el parque, bloques de construcción y cuentos ilustrados."
+        },
+        {
+          "id": "child_mateo_02",
+          "name": "Mateo",
+          "age": 1,
+          "notes": "Bebé de 1 año. En etapa de gateo y exploración oral activa."
+        }
+      ],
+      "childProfile": {
+        "name": "Leo",
+        "age": 3,
+        "notes": "Hijo de 3 años. Le encantan los paseos en el parque, bloques de construcción y cuentos ilustrados."
+      }
+    },
+    {
+      "id": "usr_parent_demo",
+      "email": "parent@example.com",
+      "name": "Familia Demo",
+      "passwordHash": "$2b$10$lokWWpTwak2ioXXiBelMt.PysQgO8oz3s2sLYtyh.SaOdFdtj.2Wq",
+      "role": "admin",
+      "createdAt": "2026-10-05T02:08:14.356Z",
+      "children": [
+        {
+          "id": "child_demo_leo",
+          "name": "Leo",
+          "age": 3,
+          "notes": "Niño de 3 años."
+        }
+      ],
+      "childProfile": {
+        "name": "Leo",
+        "age": 3,
+        "notes": "Niño de 3 años."
+      }
+    }
+  ],
+  "candidates": [],
+  "parentCampaigns": [
+    {
+      "id": "camp_initial_leo",
+      "userId": "usr_admin_francisco",
+      "title": "Campaña Principal de Cuidado Infantil",
+      "careCategory": "childcare",
+      "targetChildren": [
+        {
+          "id": "child_leo_01",
+          "name": "Leo",
+          "age": 3,
+          "notes": "Hijo de 3 años. Le encantan los paseos en el parque, bloques de construcción y cuentos ilustrados."
+        }
+      ],
+      "scheduleType": "full_time",
+      "expectedHourlyRate": "$25 - $30 / hr",
+      "startDate": "Inmediata",
+      "notes": "Búsqueda activa de profesional de cuidado.",
+      "active": true,
+      "publicToken": "camp_demo_01",
+      "createdAt": "2026-10-05T02:08:14.361Z"
+    },
+    {
+      "id": "camp_1791166223380_wu1f",
+      "userId": "usr_parent_demo",
+      "title": "Campaña Principal para Leo (3 años)",
+      "targetChildren": [
+        {
+          "id": "child_demo_leo",
+          "name": "Leo",
+          "age": 3,
+          "notes": "Niño de 3 años."
+        }
+      ],
+      "scheduleType": "full_time",
+      "expectedHourlyRate": "$25 - $30 / hr",
+      "startDate": "Inmediata",
+      "notes": "Búsqueda activa de niñera para el cuidado y desarrollo de Leo.",
+      "active": true,
+      "publicToken": "camp_np4nff",
+      "createdAt": "2026-10-05T02:10:23.380Z"
+    }
+  ],
+  "adCampaigns": [
+    {
+      "id": "ad_pampers_01",
+      "sponsorName": "Pampers Pure Harmony",
+      "title": "Pañales Hipoalergénicos & Toallitas Orgánicas",
+      "titleEs": "Pañales Hipoalergénicos & Toallitas Orgánicas",
+      "headline": "Protección dermatológica premium para bebés y lactantes (0 a 2 años)",
+      "headlineEs": "Protección dermatológica premium para bebés y lactantes (0 a 2 años)",
+      "description": "Cuidado delicado con 0% cloro y algodón premium. Evita dermatitis en pieles sensibles y brinda hasta 12 horas de absorción nocturna.",
+      "descriptionEs": "Cuidado delicado con 0% cloro y algodón premium. Evita dermatitis en pieles sensibles y brinda hasta 12 horas de absorción nocturna.",
+      "imageUrl": "https://images.unsplash.com/photo-1519689680058-324335c77eba?auto=format&fit=crop&w=600&q=80",
+      "category": "diapers",
+      "placement": "dashboard_banner",
+      "targetMinAge": 0,
+      "targetMaxAge": 2,
+      "badgeText": "Patrocinador Destacado • Bebés 0-2a",
+      "badgeTextEs": "Patrocinador Destacado • Bebés 0-2a",
+      "ctaText": "Reclamar Muestra Gratis",
+      "ctaTextEs": "Reclamar Muestra Gratis",
+      "ctaUrl": "https://www.pampers.com",
+      "bgColor": "from-amber-500/10 via-orange-500/5 to-rose-500/10",
+      "active": true,
+      "impressions": 0,
+      "clicks": 0,
+      "createdAt": "2026-09-29T18:46:22.580Z"
+    },
+    {
+      "id": "ad_montessori_books_02",
+      "sponsorName": "Montessori Kids Club",
+      "title": "Cajas Sensoriales y Libros Ilustrados para Toddlers",
+      "titleEs": "Cajas Sensoriales y Libros Ilustrados para Toddlers",
+      "headline": "Estimulación cognitiva y gestión de rabietas para niños de 2 a 4 años",
+      "headlineEs": "Estimulación cognitiva y gestión de rabietas para niños de 2 a 4 años",
+      "description": "Kits mensuales de madera no tóxica y cuentos socioemocionales recomendados por psicólogos infantiles para desarrollar lenguaje y autorregulación.",
+      "descriptionEs": "Kits mensuales de madera no tóxica y cuentos socioemocionales recomendados por psicólogos infantiles para desarrollar lenguaje y autorregulación.",
+      "imageUrl": "https://images.unsplash.com/photo-1596461404969-9ae70f2830c1?auto=format&fit=crop&w=600&q=80",
+      "category": "books",
+      "placement": "dashboard_banner",
+      "targetMinAge": 2,
+      "targetMaxAge": 4,
+      "badgeText": "Recomendado por Psicólogos • 2-4 Años",
+      "badgeTextEs": "Recomendado por Psicólogos • 2-4 Años",
+      "ctaText": "Ver Catálogo 30% OFF",
+      "ctaTextEs": "Ver Catálogo 30% OFF",
+      "ctaUrl": "https://www.montessoriservices.com",
+      "bgColor": "from-sky-500/10 via-indigo-500/5 to-emerald-500/10",
+      "active": true,
+      "impressions": 2,
+      "clicks": 0,
+      "createdAt": "2026-09-30T18:46:22.580Z"
+    },
+    {
+      "id": "ad_aquasafe_swim_03",
+      "sponsorName": "AquaSafe Academy",
+      "title": "Prevención Acuática y Clases de Natación Infantil",
+      "titleEs": "Prevención Acuática y Clases de Natación Infantil",
+      "headline": "Supervivencia y flotación reflexiva para preescolares (3 a 6 años)",
+      "headlineEs": "Supervivencia y flotación reflexiva para preescolares (3 a 6 años)",
+      "description": "Reduce un 88% el riesgo de ahogamiento infantil con instructores certificados por la Cruz Roja y estimulación motriz temprana.",
+      "descriptionEs": "Reduce un 88% el riesgo de ahogamiento infantil con instructores certificados por la Cruz Roja y estimulación motriz temprana.",
+      "imageUrl": "https://images.unsplash.com/photo-1530549387789-4c1017266635?auto=format&fit=crop&w=600&q=80",
+      "category": "education",
+      "placement": "campaign_interstitial",
+      "targetMinAge": 3,
+      "targetMaxAge": 6,
+      "badgeText": "Seguridad Infantil • 3-6 Años",
+      "badgeTextEs": "Seguridad Infantil • 3-6 Años",
+      "ctaText": "Agendar Clase de Prueba",
+      "ctaTextEs": "Agendar Clase de Prueba",
+      "ctaUrl": "https://www.redcross.org/take-a-class/swimming",
+      "bgColor": "from-teal-500/10 via-cyan-500/5 to-blue-500/10",
+      "active": true,
+      "impressions": 0,
+      "clicks": 0,
+      "createdAt": "2026-10-02T18:46:22.580Z"
+    }
+  ],
+  "affiliateSettings": {
+    "id": "global_settings",
+    "amazonTag": "matchcaring-20",
+    "autoInjectLinks": true,
+    "disclosureText": "As an Amazon Associate we earn from qualifying purchases.",
+    "disclosureTextEs": "Como Afiliado de Amazon, percibimos ingresos por compras adscritas que cumplan los requisitos aplicables.",
+    "updatedAt": "2026-10-05T02:08:14.361Z"
+  },
+  "recommendedProducts": [],
+  "userQuestionBank": []
+}
