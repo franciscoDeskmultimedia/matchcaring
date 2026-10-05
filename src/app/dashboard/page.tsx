@@ -10,6 +10,7 @@ import RecommendedProductsSection from "@/components/RecommendedProductsSection"
 import NannyPoolExplorer from "@/components/NannyPoolExplorer";
 import CreateCampaignModal from "@/components/CreateCampaignModal";
 import QuestionBankModal from "@/components/QuestionBankModal";
+import ShareCampaignModal from "@/components/ShareCampaignModal";
 import { Candidate, CareCategory, Child, ParentCampaign, User } from "@/lib/types";
 import { useLanguage } from "@/components/LanguageContext";
 import {
@@ -66,6 +67,14 @@ export default function DashboardPage() {
   const [isQuestionBankOpen, setIsQuestionBankOpen] = useState(false);
   const [copiedCampaignId, setCopiedCampaignId] = useState<string | null>(null);
 
+  // Campaign Sharing & Collaboration state
+  const [shareCampaign, setShareCampaign] = useState<ParentCampaign | null>(null);
+  const [isJoinModalOpen, setIsJoinModalOpen] = useState(false);
+  const [joinCodeInput, setJoinCodeInput] = useState("");
+  const [isJoining, setIsJoining] = useState(false);
+  const [joinError, setJoinError] = useState("");
+  const [joinSuccess, setJoinSuccess] = useState("");
+
   useEffect(() => {
     fetchData();
     if (typeof window !== "undefined") {
@@ -78,6 +87,10 @@ export default function DashboardPage() {
       }
       if (params.get("campaignId")) {
         setSelectedCampaignId(params.get("campaignId")!);
+      }
+      if (params.get("joinCode")) {
+        setJoinCodeInput(params.get("joinCode")!);
+        setIsJoinModalOpen(true);
       }
     }
   }, []);
@@ -146,6 +159,63 @@ export default function DashboardPage() {
     navigator.clipboard.writeText(link);
     setCopiedCampaignId(campaign.id);
     setTimeout(() => setCopiedCampaignId(null), 2000);
+  };
+
+  const handleJoinCampaign = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!joinCodeInput.trim()) return;
+
+    setIsJoining(true);
+    setJoinError("");
+    setJoinSuccess("");
+
+    try {
+      const res = await fetch("/api/campaigns/join", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: joinCodeInput.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setJoinError(
+          data.error ||
+            (language === "es"
+              ? "Código inválido o no se encontró la campaña."
+              : "Invalid code or campaign not found.")
+        );
+      } else {
+        setJoinSuccess(
+          language === "es"
+            ? `¡Te has unido exitosamente a "${data.campaign.title}"!`
+            : `Successfully joined "${data.campaign.title}"!`
+        );
+        setCampaigns((prev) => {
+          const exists = prev.find((c) => c.id === data.campaign.id);
+          if (exists) {
+            return prev.map((c) => (c.id === data.campaign.id ? data.campaign : c));
+          }
+          return [data.campaign, ...prev];
+        });
+        setSelectedCampaignId(data.campaign.id);
+
+        // Refresh candidate list to load co-shared candidates immediately
+        const candRes = await fetch("/api/candidates");
+        if (candRes.ok) {
+          const candData = await candRes.json();
+          setCandidates(candData.candidates || []);
+        }
+
+        setTimeout(() => {
+          setIsJoinModalOpen(false);
+          setJoinSuccess("");
+          setJoinCodeInput("");
+        }, 1600);
+      }
+    } catch (err: any) {
+      setJoinError(err.message || "Network error");
+    } finally {
+      setIsJoining(false);
+    }
   };
 
   const handleDeleteCandidate = async (id: string, name: string) => {
@@ -523,6 +593,19 @@ export default function DashboardPage() {
 
             <div className="flex items-center gap-2 shrink-0">
               <button
+                onClick={() => {
+                  setJoinError("");
+                  setJoinSuccess("");
+                  setIsJoinModalOpen(true);
+                }}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all cursor-pointer"
+                title={language === "es" ? "Unirse a una campaña compartida con código" : "Join a shared campaign with code"}
+              >
+                <Users className="w-3.5 h-3.5 text-sky-600" />
+                <span>{language === "es" ? "Unirse con Código" : "Join with Code"}</span>
+              </button>
+
+              <button
                 onClick={() => setIsQuestionBankOpen(true)}
                 className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all cursor-pointer"
               >
@@ -696,6 +779,13 @@ export default function DashboardPage() {
                               <span>{language === "es" ? "Infantil" : "Childcare"}</span>
                             </span>
                           )}
+
+                          {camp.userId !== user?.id && (
+                            <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-md bg-purple-100 text-purple-900 border border-purple-300 flex items-center gap-1" title={language === "es" ? "Campaña compartida contigo" : "Campaign shared with you"}>
+                              <Users className="w-3 h-3 text-purple-700" />
+                              <span>{language === "es" ? "Compartida" : "Shared"}</span>
+                            </span>
+                          )}
                         </div>
                         <button
                           onClick={(e) => {
@@ -792,24 +882,37 @@ export default function DashboardPage() {
                             e.stopPropagation();
                             handleCopyCampaignLink(camp);
                           }}
-                          className="flex-1 py-2 px-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs transition-all flex items-center justify-center gap-1.5 shadow-xs cursor-pointer"
+                          className="flex-1 py-2 px-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs transition-all flex items-center justify-center gap-1.5 shadow-xs cursor-pointer"
                         >
                           <Copy className="w-3.5 h-3.5" />
                           <span>
                             {copiedCampaignId === camp.id
                               ? language === "es" ? "¡Copiado!" : "Copied!"
-                              : language === "es" ? "Copiar Enlace" : "Copy Link"}
+                              : language === "es" ? "Enlace" : "Link"}
                           </span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setShareCampaign(camp);
+                          }}
+                          className="py-2 px-2.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 font-bold text-xs transition-all flex items-center justify-center gap-1 cursor-pointer"
+                          title={language === "es" ? "Compartir esta campaña con otro usuario" : "Share this campaign with another user"}
+                        >
+                          <Share2 className="w-3.5 h-3.5 text-indigo-600" />
+                          <span>{language === "es" ? "Compartir" : "Share"}</span>
                         </button>
 
                         <Link
                           href={`/dashboard/new?campaignId=${camp.id}`}
                           onClick={(e) => e.stopPropagation()}
-                          className="py-2 px-3 rounded-xl bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200 font-bold text-xs transition-all flex items-center justify-center gap-1 cursor-pointer"
+                          className="py-2 px-2.5 rounded-xl bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200 font-bold text-xs transition-all flex items-center justify-center gap-1 cursor-pointer"
                           title={language === "es" ? "Invitar candidata a esta campaña" : "Invite candidate to this campaign"}
                         >
                           <UserPlus className="w-3.5 h-3.5" />
-                          <span className="hidden sm:inline">{language === "es" ? "Invitar" : "Invite"}</span>
+                          <span>{language === "es" ? "Invitar" : "Invite"}</span>
                         </Link>
                       </div>
                     </div>
@@ -1632,6 +1735,114 @@ export default function DashboardPage() {
         isOpen={isQuestionBankOpen}
         onClose={() => setIsQuestionBankOpen(false)}
       />
+
+      {/* Share Campaign Modal */}
+      <ShareCampaignModal
+        isOpen={Boolean(shareCampaign)}
+        onClose={() => setShareCampaign(null)}
+        campaign={shareCampaign}
+        currentUserId={user?.id}
+        onCampaignUpdated={(updated) => {
+          setCampaigns((prev) =>
+            prev.map((c) => (c.id === updated.id ? updated : c))
+          );
+          setShareCampaign(updated);
+        }}
+      />
+
+      {/* Join Campaign by Code Modal */}
+      {isJoinModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in">
+          <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden">
+            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-sky-50 to-indigo-50/50">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-sky-600 text-white flex items-center justify-center shadow-md shadow-sky-600/20">
+                  <Users className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-slate-900">
+                    {language === "es"
+                      ? "Unirse a una Campaña Compartida"
+                      : "Join a Shared Campaign"}
+                  </h3>
+                  <p className="text-[11px] text-slate-500">
+                    {language === "es"
+                      ? "Ingresa el código proporcionado por el titular"
+                      : "Enter the code provided by the campaign owner"}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setIsJoinModalOpen(false);
+                  setJoinError("");
+                  setJoinSuccess("");
+                }}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleJoinCampaign} className="p-6 space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-black text-slate-700 uppercase tracking-wider block">
+                  {language === "es"
+                    ? "Código de Campaña (ej. MC-ABCD-1234)"
+                    : "Campaign Code (e.g. MC-ABCD-1234)"}
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="MC-XXXX-YYYY"
+                  value={joinCodeInput}
+                  onChange={(e) => setJoinCodeInput(e.target.value.toUpperCase())}
+                  className="w-full px-3.5 py-3 text-sm font-mono tracking-wider font-bold bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-sky-500 text-slate-900"
+                />
+              </div>
+
+              {joinError && (
+                <p className="text-xs text-rose-600 font-bold bg-rose-50 p-2.5 rounded-lg border border-rose-200">
+                  {joinError}
+                </p>
+              )}
+
+              {joinSuccess && (
+                <p className="text-xs text-emerald-700 font-bold bg-emerald-50 p-2.5 rounded-lg border border-emerald-200 flex items-center gap-1.5">
+                  <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>{joinSuccess}</span>
+                </p>
+              )}
+
+              <div className="pt-2 flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsJoinModalOpen(false)}
+                  className="px-4 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold transition-all cursor-pointer"
+                >
+                  {language === "es" ? "Cancelar" : "Cancel"}
+                </button>
+                <button
+                  type="submit"
+                  disabled={isJoining || !joinCodeInput.trim()}
+                  className="px-5 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 disabled:bg-slate-300 text-white text-xs font-black shadow-md shadow-sky-600/20 transition-all cursor-pointer flex items-center gap-1.5"
+                >
+                  <Users className="w-3.5 h-3.5" />
+                  <span>
+                    {isJoining
+                      ? language === "es"
+                        ? "Vinculando..."
+                        : "Linking..."
+                      : language === "es"
+                      ? "Vincular Campaña"
+                      : "Link Campaign"}
+                  </span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -129,8 +129,14 @@ export async function ensurePostgresSchema(): Promise<void> {
           notes TEXT,
           active BOOLEAN DEFAULT true,
           public_token VARCHAR(64),
+          share_code VARCHAR(64),
+          shared_with_emails JSONB DEFAULT '[]'::jsonb,
+          shared_with_user_ids JSONB DEFAULT '[]'::jsonb,
           created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       );
+      ALTER TABLE parent_campaigns ADD COLUMN IF NOT EXISTS share_code VARCHAR(64);
+      ALTER TABLE parent_campaigns ADD COLUMN IF NOT EXISTS shared_with_emails JSONB DEFAULT '[]'::jsonb;
+      ALTER TABLE parent_campaigns ADD COLUMN IF NOT EXISTS shared_with_user_ids JSONB DEFAULT '[]'::jsonb;
 
       CREATE TABLE IF NOT EXISTS ad_campaigns (
           id VARCHAR(64) PRIMARY KEY,
@@ -390,7 +396,15 @@ function mapCandidateRow(row: any): Candidate {
 export async function pgGetCandidatesByUserId(userId: string): Promise<Candidate[]> {
   await ensurePostgresSchema();
   const pool = getPostgresPool();
-  const res = await pool.query("SELECT * FROM candidates WHERE user_id = $1 ORDER BY created_at DESC", [userId]);
+
+  // Find all campaign owner IDs accessible to this user (owned or shared)
+  const accessibleCampaigns = await pgGetParentCampaigns(userId);
+  const userIds = Array.from(new Set([userId, ...accessibleCampaigns.map((c) => c.userId)]));
+
+  const res = await pool.query(
+    "SELECT * FROM candidates WHERE user_id = ANY($1::text[]) ORDER BY created_at DESC",
+    [userIds]
+  );
   return res.rows.map(mapCandidateRow);
 }
 
@@ -1078,6 +1092,9 @@ function mapCampaignRow(row: any): ParentCampaign {
     notes: row.notes || undefined,
     active: row.active !== false,
     publicToken: row.public_token || undefined,
+    shareCode: row.share_code || undefined,
+    sharedWithEmails: typeof row.shared_with_emails === "string" ? JSON.parse(row.shared_with_emails) : row.shared_with_emails || [],
+    sharedWithUserIds: typeof row.shared_with_user_ids === "string" ? JSON.parse(row.shared_with_user_ids) : row.shared_with_user_ids || [],
     createdAt: row.created_at ? new Date(row.created_at).toISOString() : new Date().toISOString(),
   };
 }
@@ -1085,7 +1102,18 @@ function mapCampaignRow(row: any): ParentCampaign {
 export async function pgGetParentCampaigns(userId: string): Promise<ParentCampaign[]> {
   await ensurePostgresSchema();
   const pool = getPostgresPool();
-  const res = await pool.query("SELECT * FROM parent_campaigns WHERE user_id = $1 ORDER BY created_at DESC", [userId]);
+
+  const userRes = await pool.query("SELECT email FROM users WHERE id = $1 LIMIT 1", [userId]);
+  const userEmail = (userRes.rows[0]?.email || "").toLowerCase();
+
+  const res = await pool.query(
+    `SELECT * FROM parent_campaigns
+     WHERE user_id = $1
+        OR shared_with_user_ids @> to_jsonb($1::text)
+        OR (CASE WHEN $2 != '' THEN shared_with_emails @> to_jsonb($2::text) ELSE false END)
+     ORDER BY created_at DESC`,
+    [userId, userEmail]
+  );
   let campaigns = res.rows.map(mapCampaignRow);
 
   if (campaigns.length === 0) {
@@ -1116,12 +1144,14 @@ export async function pgCreateParentCampaign(
   const pool = getPostgresPool();
   const id = `camp_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
   const publicToken = `camp_${Math.random().toString(36).substring(2, 8)}`;
+  const shareCode = `MC-${Math.random().toString(36).substring(2, 6).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
 
   const res = await pool.query(
     `INSERT INTO parent_campaigns (
        id, user_id, title, care_category, target_children, schedule_type,
-       expected_hourly_rate, start_date, notes, active, public_token, created_at
-     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,NOW())
+       expected_hourly_rate, start_date, notes, active, public_token, share_code,
+       shared_with_emails, shared_with_user_ids, created_at
+     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,NOW())
      RETURNING *`,
     [
       id,
@@ -1135,14 +1165,100 @@ export async function pgCreateParentCampaign(
       data.notes || null,
       data.active !== false,
       publicToken,
+      data.shareCode || shareCode,
+      JSON.stringify(data.sharedWithEmails || []),
+      JSON.stringify(data.sharedWithUserIds || []),
     ]
   );
   return mapCampaignRow(res.rows[0]);
 }
 
+export async function pgShareParentCampaign(
+  campaignId: string,
+  emailToShare: string,
+  currentUserId: string
+): Promise<{ success: boolean; campaign?: ParentCampaign; message?: string }> {
+  await ensurePostgresSchema();
+  const pool = getPostgresPool();
+  const cleanEmail = emailToShare.trim().toLowerCase();
+  if (!cleanEmail) {
+    return { success: false, message: "Email is required" };
+  }
+
+  const res = await pool.query("SELECT * FROM parent_campaigns WHERE id = $1 LIMIT 1", [campaignId]);
+  if (res.rows.length === 0) {
+    return { success: false, message: "Campaign not found" };
+  }
+
+  const campaign = mapCampaignRow(res.rows[0]);
+  const isOwner = campaign.userId === currentUserId;
+  const isShared = (campaign.sharedWithUserIds || []).includes(currentUserId);
+  if (!isOwner && !isShared) {
+    return { success: false, message: "Unauthorized to share this campaign" };
+  }
+
+  const emails = Array.from(new Set([...(campaign.sharedWithEmails || []), cleanEmail]));
+
+  // Check if a registered user with this email exists
+  const userMatch = await pool.query("SELECT id FROM users WHERE LOWER(email) = LOWER($1) LIMIT 1", [cleanEmail]);
+  let userIds = campaign.sharedWithUserIds || [];
+  if (userMatch.rows.length > 0) {
+    userIds = Array.from(new Set([...userIds, userMatch.rows[0].id]));
+  }
+
+  const updated = await pool.query(
+    `UPDATE parent_campaigns SET
+       shared_with_emails = $1,
+       shared_with_user_ids = $2
+     WHERE id = $3
+     RETURNING *`,
+    [JSON.stringify(emails), JSON.stringify(userIds), campaignId]
+  );
+
+  return { success: true, campaign: mapCampaignRow(updated.rows[0]) };
+}
+
+export async function pgJoinParentCampaignByCode(
+  code: string,
+  userId: string,
+  userEmail?: string
+): Promise<{ success: boolean; campaign?: ParentCampaign; message?: string }> {
+  await ensurePostgresSchema();
+  const pool = getPostgresPool();
+  const cleanCode = code.trim().toUpperCase();
+
+  const res = await pool.query(
+    "SELECT * FROM parent_campaigns WHERE UPPER(share_code) = $1 OR id = $2 OR public_token = $2 LIMIT 1",
+    [cleanCode, code.trim()]
+  );
+  if (res.rows.length === 0) {
+    return { success: false, message: "Invalid campaign code or campaign not found" };
+  }
+
+  const campaign = mapCampaignRow(res.rows[0]);
+  const userIds = Array.from(new Set([...(campaign.sharedWithUserIds || []), userId]));
+  const emails = userEmail
+    ? Array.from(new Set([...(campaign.sharedWithEmails || []), userEmail.trim().toLowerCase()]))
+    : campaign.sharedWithEmails || [];
+
+  const updated = await pool.query(
+    `UPDATE parent_campaigns SET
+       shared_with_user_ids = $1,
+       shared_with_emails = $2
+     WHERE id = $3
+     RETURNING *`,
+    [JSON.stringify(userIds), JSON.stringify(emails), campaign.id]
+  );
+
+  return { success: true, campaign: mapCampaignRow(updated.rows[0]) };
+}
+
 export async function pgDeleteParentCampaign(userId: string, campaignId: string): Promise<boolean> {
   await ensurePostgresSchema();
   const pool = getPostgresPool();
-  const res = await pool.query("DELETE FROM parent_campaigns WHERE id = $1 AND user_id = $2", [campaignId, userId]);
+  const res = await pool.query(
+    "DELETE FROM parent_campaigns WHERE id = $1 AND (user_id = $2 OR shared_with_user_ids @> to_jsonb($2::text))",
+    [campaignId, userId]
+  );
   return (res.rowCount ?? 0) > 0;
 }

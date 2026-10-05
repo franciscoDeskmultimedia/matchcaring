@@ -62,6 +62,8 @@ import {
   pgGetParentCampaigns,
   pgCreateParentCampaign,
   pgDeleteParentCampaign,
+  pgShareParentCampaign,
+  pgJoinParentCampaignByCode,
 } from "./postgres";
 
 interface DatabaseSchema {
@@ -433,7 +435,9 @@ export async function deleteUserChild(userId: string, childId: string): Promise<
 export async function getCandidatesByUserId(userId: string): Promise<Candidate[]> {
   if (isPostgresActive()) return pgGetCandidatesByUserId(userId);
   const db = loadDatabase();
-  return db.candidates.filter((c) => c.userId === userId);
+  const campaigns = await getParentCampaigns(userId);
+  const accessibleOwnerIds = new Set([userId, ...campaigns.map((c) => c.userId)]);
+  return db.candidates.filter((c) => accessibleOwnerIds.has(c.userId));
 }
 
 export async function getCandidateById(id: string): Promise<Candidate | undefined> {
@@ -1062,15 +1066,24 @@ export async function deleteQuestionFromBank(userId: string, questionId: string)
 export async function getParentCampaigns(userId: string): Promise<ParentCampaign[]> {
   if (isPostgresActive()) return pgGetParentCampaigns(userId);
   const db = loadDatabase();
-  let campaigns = (db.parentCampaigns || []).filter((c) => c.userId === userId);
+  const user = db.users.find((u) => u.id === userId);
+  const userEmail = user?.email?.toLowerCase() || "";
+
+  let campaigns = (db.parentCampaigns || []).filter(
+    (c) =>
+      c.userId === userId ||
+      (c.sharedWithUserIds || []).includes(userId) ||
+      (userEmail && (c.sharedWithEmails || []).some((e) => e.toLowerCase() === userEmail))
+  );
 
   // If no campaigns exist yet, synthesize or bootstrap default campaigns from children
   if (campaigns.length === 0) {
-    const user = db.users.find((u) => u.id === userId);
     const children = user?.children || (user?.childProfile ? [{ id: "child_leo", ...user.childProfile }] : []);
 
     if (children.length > 0) {
       if (!db.parentCampaigns) db.parentCampaigns = [];
+
+      const shareCode = `MC-${Math.random().toString(36).substring(2, 6).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
 
       // Create primary campaign
       const defaultCamp: ParentCampaign = {
@@ -1081,9 +1094,12 @@ export async function getParentCampaigns(userId: string): Promise<ParentCampaign
         scheduleType: "full_time",
         expectedHourlyRate: "$25 - $30 / hr",
         startDate: "Inmediata",
-        notes: `Búsqueda activa de niñera para el cuidado y desarrollo de ${children[0].name}.`,
+        notes: `Búsqueda activa de profesional de cuidado para ${children[0].name}.`,
         active: true,
         publicToken: `camp_${Math.random().toString(36).substring(2, 8)}`,
+        shareCode,
+        sharedWithEmails: [],
+        sharedWithUserIds: [],
         createdAt: new Date().toISOString(),
       };
       db.parentCampaigns.push(defaultCamp);
@@ -1103,11 +1119,16 @@ export async function createParentCampaign(
   const db = loadDatabase();
   if (!db.parentCampaigns) db.parentCampaigns = [];
 
+  const shareCode = `MC-${Math.random().toString(36).substring(2, 6).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+
   const newCampaign: ParentCampaign = {
     ...data,
     id: `camp_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
     userId,
     publicToken: `camp_${Math.random().toString(36).substring(2, 8)}`,
+    shareCode: data.shareCode || shareCode,
+    sharedWithEmails: data.sharedWithEmails || [],
+    sharedWithUserIds: data.sharedWithUserIds || [],
     active: data.active !== false,
     createdAt: new Date().toISOString(),
   };
@@ -1117,6 +1138,72 @@ export async function createParentCampaign(
   return newCampaign;
 }
 
+export async function shareParentCampaign(
+  campaignId: string,
+  emailToShare: string,
+  currentUserId: string
+): Promise<{ success: boolean; campaign?: ParentCampaign; message?: string }> {
+  if (isPostgresActive()) return pgShareParentCampaign(campaignId, emailToShare, currentUserId);
+  const db = loadDatabase();
+  if (!db.parentCampaigns) return { success: false, message: "Campaign not found" };
+
+  const campIndex = db.parentCampaigns.findIndex((c) => c.id === campaignId);
+  if (campIndex === -1) return { success: false, message: "Campaign not found" };
+
+  const campaign = db.parentCampaigns[campIndex];
+  const isOwner = campaign.userId === currentUserId;
+  const isShared = (campaign.sharedWithUserIds || []).includes(currentUserId);
+  if (!isOwner && !isShared) {
+    return { success: false, message: "Unauthorized to share this campaign" };
+  }
+
+  const cleanEmail = emailToShare.trim().toLowerCase();
+  const emails = Array.from(new Set([...(campaign.sharedWithEmails || []), cleanEmail]));
+
+  const matchingUser = db.users.find((u) => u.email.toLowerCase() === cleanEmail);
+  let userIds = campaign.sharedWithUserIds || [];
+  if (matchingUser) {
+    userIds = Array.from(new Set([...userIds, matchingUser.id]));
+  }
+
+  campaign.sharedWithEmails = emails;
+  campaign.sharedWithUserIds = userIds;
+  saveDatabase(db);
+
+  return { success: true, campaign };
+}
+
+export async function joinParentCampaignByCode(
+  code: string,
+  userId: string,
+  userEmail?: string
+): Promise<{ success: boolean; campaign?: ParentCampaign; message?: string }> {
+  if (isPostgresActive()) return pgJoinParentCampaignByCode(code, userId, userEmail);
+  const db = loadDatabase();
+  if (!db.parentCampaigns) return { success: false, message: "Invalid campaign code" };
+
+  const cleanCode = code.trim().toUpperCase();
+  const campIndex = db.parentCampaigns.findIndex(
+    (c) => (c.shareCode && c.shareCode.toUpperCase() === cleanCode) || c.id === code.trim() || c.publicToken === code.trim()
+  );
+
+  if (campIndex === -1) {
+    return { success: false, message: "Campaign not found with this code" };
+  }
+
+  const campaign = db.parentCampaigns[campIndex];
+  const userIds = Array.from(new Set([...(campaign.sharedWithUserIds || []), userId]));
+  const emails = userEmail
+    ? Array.from(new Set([...(campaign.sharedWithEmails || []), userEmail.trim().toLowerCase()]))
+    : campaign.sharedWithEmails || [];
+
+  campaign.sharedWithUserIds = userIds;
+  campaign.sharedWithEmails = emails;
+  saveDatabase(db);
+
+  return { success: true, campaign };
+}
+
 export async function deleteParentCampaign(userId: string, campaignId: string): Promise<boolean> {
   if (isPostgresActive()) return pgDeleteParentCampaign(userId, campaignId);
   const db = loadDatabase();
@@ -1124,7 +1211,7 @@ export async function deleteParentCampaign(userId: string, campaignId: string): 
 
   const initialLen = db.parentCampaigns.length;
   db.parentCampaigns = db.parentCampaigns.filter(
-    (c) => !(c.id === campaignId && c.userId === userId)
+    (c) => !(c.id === campaignId && (c.userId === userId || (c.sharedWithUserIds || []).includes(userId)))
   );
 
   if (db.parentCampaigns.length !== initialLen) {

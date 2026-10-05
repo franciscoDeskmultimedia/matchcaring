@@ -20,6 +20,9 @@ import {
   Sparkles,
   Users,
   Activity,
+  Cpu,
+  FileText,
+  Target,
 } from "lucide-react";
 
 interface HomeClientProps {
@@ -412,6 +415,132 @@ export default function HomeClient({ user }: HomeClientProps) {
                       : "Instantly flags choices that represent physical punishment, negligence in water, or concealing injuries before you invite them into your home."}
                   </p>
                 </div>
+              </div>
+            </div>
+
+            {/* Trust & Methodology: How Scores Are Generated */}
+            <div className="mt-20 p-8 sm:p-10 rounded-3xl bg-gradient-to-b from-white to-sky-50/40 border border-sky-100 shadow-sm space-y-8">
+              <div className="text-center max-w-2xl mx-auto space-y-3">
+                <span className="text-[11px] font-black uppercase tracking-widest px-3 py-1 rounded-full bg-sky-100 text-sky-800 border border-sky-200">
+                  {language === "es"
+                    ? "Rigor Clínico & Transparencia Científica"
+                    : "Clinical Rigor & Scientific Transparency"}
+                </span>
+                <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+                  {language === "es"
+                    ? "¿Cómo se Calculan los Puntajes y Diagnósticos?"
+                    : "How Are Scores & Clinical Diagnoses Generated?"}
+                </h2>
+                <p className="text-xs sm:text-sm text-slate-500 leading-relaxed">
+                  {language === "es"
+                    ? "No emitimos calificaciones al azar. Nuestro motor de evaluación pondera respuestas ante dilemas situacionales reales, contrastándolas con protocolos de seguridad vital y matrices psicométricas validadas."
+                    : "We do not assign arbitrary scores. Our scoring engine evaluates candidate decisions in real-world crisis scenarios, weighing safety protocols and validated behavioral matrices."}
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Step 1: Ponderación Graduada */}
+                <div className="p-6 rounded-2xl bg-white border border-slate-200/90 shadow-2xs space-y-3 flex items-start gap-4">
+                  <div className="w-12 h-12 rounded-2xl bg-sky-50 text-sky-600 flex items-center justify-center shrink-0">
+                    <Target className="w-6 h-6" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <h3 className="text-sm sm:text-base font-bold text-slate-900 flex items-center gap-2">
+                      <span>1.</span>
+                      <span>
+                        {language === "es"
+                          ? "Ponderación Graduada de Dilemas (0 - 100)"
+                          : "Graded Dilemma Weighting (0 - 100)"}
+                      </span>
+                    </h3>
+                    <p className="text-xs text-slate-500 leading-relaxed">
+                      {language === "es"
+                        ? "Cada reactivo sitúa a la postulante en un escenario de alta tensión. Las opciones no son obvias: se calibran desde la respuesta ideal (100 pts) hasta opciones de alto riesgo (0 pts), evaluando si prioriza la seguridad integral o la conveniencia personal."
+                        : "Each prompt places candidates into high-pressure moments. Choices are calibrated from best-practice responses (100 pts) to severe risk selections (0 pts), gauging whether safety or convenience comes first."}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Step 2: Detección de Banderas Rojas */}
+                <div className="p-6 rounded-2xl bg-white border border-rose-100 shadow-2xs space-y-3 flex items-start gap-4">
+                  <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center shrink-0">
+                    <AlertOctagon className="w-6 h-6" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <h3 className="text-sm sm:text-base font-bold text-slate-900 flex items-center gap-2">
+                      <span>2.</span>
+                      <span>
+                        {language === "es"
+                          ? "Detección Inmediata de Banderas Rojas"
+                          : "Immediate Red Flag Triggering"}
+                      </span>
+                    </h3>
+                    <p className="text-xs text-slate-500 leading-relaxed">
+                      {language === "es"
+                        ? "Tolerancia cero a riesgos críticos: cualquier indicio de castigo físico, desatención en piscinas o tinas, o encubrimiento de caídas activa una alerta roja inmediata en el reporte, sin importar qué tan alto sea el puntaje general de la candidata."
+                        : "Zero tolerance for critical hazards: any endorsement of physical punishment, water lapses, or injury concealment triggers a prominent red alert on the scorecard, regardless of high scores in other areas."}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Step 3: Ponderación Multidimensional */}
+                <div className="p-6 rounded-2xl bg-white border border-slate-200/90 shadow-2xs space-y-3 flex items-start gap-4">
+                  <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+                    <Cpu className="w-6 h-6" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <h3 className="text-sm sm:text-base font-bold text-slate-900 flex items-center gap-2">
+                      <span>3.</span>
+                      <span>
+                        {language === "es"
+                          ? "Normalización Multidimensional"
+                          : "Multidimensional Normalization"}
+                      </span>
+                    </h3>
+                    <p className="text-xs text-slate-500 leading-relaxed">
+                      {language === "es"
+                        ? "El resultado no es un número aislado, sino un desglose en 6 pilares: Regulación Emocional, Primeros Auxilios/Seguridad (AAP/Geriatría), Juicio Situacional, Pedagogía/Cuidado, Ética y Consistencia, evitando sesgos subjetivos."
+                        : "Results are not a single blunt metric, but broken down into 6 key pillars: Emotional Regulation, First Aid/Safety, Situational Judgment, Development, Ethics, and Consistency to eliminate subjective bias."}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Step 4: Guía Quirúrgica para la Entrevista */}
+                <div className="p-6 rounded-2xl bg-white border border-slate-200/90 shadow-2xs space-y-3 flex items-start gap-4">
+                  <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                    <FileText className="w-6 h-6" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <h3 className="text-sm sm:text-base font-bold text-slate-900 flex items-center gap-2">
+                      <span>4.</span>
+                      <span>
+                        {language === "es"
+                          ? "Guía Quirúrgica para la Entrevista"
+                          : "Surgical Follow-up Interview Guide"}
+                      </span>
+                    </h3>
+                    <p className="text-xs text-slate-500 leading-relaxed">
+                      {language === "es"
+                        ? "Por cada punto bajo o reactivo dudoso, el sistema formula preguntas de seguimiento personalizadas para que la familia investigue a fondo en la entrevista presencial antes de tomar cualquier decisión de contratación."
+                        : "For every weak answer or flagged scenario, the system automatically writes targeted follow-up questions for the family to ask in the in-person interview before finalizing a hiring decision."}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Verified Protocol Footer */}
+              <div className="p-4 rounded-xl bg-white border border-slate-200/80 flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
+                <div className="flex items-center gap-2 text-xs font-semibold text-slate-700">
+                  <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>
+                    {language === "es"
+                      ? "Alineado con directrices de la AAP (Academia Americana de Pediatría) y estándares geriátricos internacionales."
+                      : "Aligned with American Academy of Pediatrics (AAP) safety guidelines and international geriatric care standards."}
+                  </span>
+                </div>
+                <span className="text-[11px] font-bold text-sky-600 uppercase tracking-wider shrink-0">
+                  {language === "es" ? "100% Imparcial y Seguro" : "100% Unbiased & Secure"}
+                </span>
               </div>
             </div>
 

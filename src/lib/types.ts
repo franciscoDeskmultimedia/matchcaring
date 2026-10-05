@@ -234,6 +234,9 @@ export interface ParentCampaign {
   customQuestions?: CustomQuestion[];
   active: boolean;
   publicToken?: string;
+  shareCode?: string; // Shareable code for family / recruiter co-management
+  sharedWithEmails?: string[]; // Emails of users who can view & manage this campaign
+  sharedWithUserIds?: string[]; // IDs of users who can view & manage this campaign
   createdAt: string;
 }
 
