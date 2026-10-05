@@ -21,6 +21,48 @@ import {
 import { evaluateAssessment } from "./scoring";
 import { RECOMMENDED_PRODUCTS } from "./recommendedProducts";
 import { DEFAULT_QUESTION_BANK_GROUPS } from "./questionBank";
+import {
+  isPostgresActive,
+  pgGetUserByEmail,
+  pgGetUserById,
+  pgCreateUser,
+  pgGetUserChildren,
+  pgAddUserChild,
+  pgDeleteUserChild,
+  pgGetAllUsers,
+  pgGetCandidatesByUserId,
+  pgGetCandidateById,
+  pgGetCandidateByToken,
+  pgCreateCandidate,
+  pgUpdateCandidate,
+  pgDeleteCandidate,
+  pgSaveCandidateSubmission,
+  pgGetAllCandidates,
+  pgGetNannyTalentPool,
+  pgUpdateCandidateTalentPool,
+  pgGetAvailableNannyPoolForParents,
+  pgCreateCandidateFromPool,
+  pgGetAdCampaigns,
+  pgCreateAdCampaign,
+  pgUpdateAdCampaign,
+  pgDeleteAdCampaign,
+  pgTrackAdImpression,
+  pgTrackAdClick,
+  pgGetAdsForAge,
+  pgGetAffiliateSettings,
+  pgUpdateAffiliateSettings,
+  pgGetAdminRecommendedProducts,
+  pgCreateRecommendedProduct,
+  pgUpdateRecommendedProduct,
+  pgDeleteRecommendedProduct,
+  pgGetPublicRecommendedProducts,
+  pgGetUserQuestionBank,
+  pgAddQuestionToBank,
+  pgDeleteQuestionFromBank,
+  pgGetParentCampaigns,
+  pgCreateParentCampaign,
+  pgDeleteParentCampaign,
+} from "./postgres";
 
 interface DatabaseSchema {
   users: User[];
@@ -475,11 +517,13 @@ function seedInitialData(): DatabaseSchema {
 
 // User Methods
 export async function getUserByEmail(email: string): Promise<User | undefined> {
+  if (isPostgresActive()) return pgGetUserByEmail(email);
   const db = loadDatabase();
   return db.users.find((u) => u.email.toLowerCase() === email.toLowerCase());
 }
 
 export async function getUserById(id: string): Promise<User | undefined> {
+  if (isPostgresActive()) return pgGetUserById(id);
   const db = loadDatabase();
   return db.users.find((u) => u.id === id);
 }
@@ -490,6 +534,7 @@ export async function createUser(userData: {
   passwordHash: string;
   childProfile?: User["childProfile"];
 }): Promise<User> {
+  if (isPostgresActive()) return pgCreateUser(userData);
   const db = loadDatabase();
   const newUser: User = {
     id: `usr_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
@@ -514,6 +559,7 @@ export async function createUser(userData: {
 
 // Child Management Methods
 export async function getUserChildren(userId: string): Promise<Child[]> {
+  if (isPostgresActive()) return pgGetUserChildren(userId);
   const user = await getUserById(userId);
   if (!user) return [];
   if (user.children && user.children.length > 0) return user.children;
@@ -534,6 +580,7 @@ export async function addUserChild(
   userId: string,
   childData: { name: string; age: number; notes?: string }
 ): Promise<Child | undefined> {
+  if (isPostgresActive()) return pgAddUserChild(userId, childData);
   const db = loadDatabase();
   const userIndex = db.users.findIndex((u) => u.id === userId);
   if (userIndex === -1) return undefined;
@@ -554,6 +601,7 @@ export async function addUserChild(
 }
 
 export async function deleteUserChild(userId: string, childId: string): Promise<boolean> {
+  if (isPostgresActive()) return pgDeleteUserChild(userId, childId);
   const db = loadDatabase();
   const userIndex = db.users.findIndex((u) => u.id === userId);
   if (userIndex === -1 || !db.users[userIndex].children) return false;
@@ -569,16 +617,19 @@ export async function deleteUserChild(userId: string, childId: string): Promise<
 
 // Candidate Methods
 export async function getCandidatesByUserId(userId: string): Promise<Candidate[]> {
+  if (isPostgresActive()) return pgGetCandidatesByUserId(userId);
   const db = loadDatabase();
   return db.candidates.filter((c) => c.userId === userId);
 }
 
 export async function getCandidateById(id: string): Promise<Candidate | undefined> {
+  if (isPostgresActive()) return pgGetCandidateById(id);
   const db = loadDatabase();
   return db.candidates.find((c) => c.id === id);
 }
 
 export async function getCandidateByToken(token: string): Promise<Candidate | undefined> {
+  if (isPostgresActive()) return pgGetCandidateByToken(token);
   const db = loadDatabase();
   return db.candidates.find((c) => c.token === token);
 }
@@ -594,6 +645,7 @@ export async function createCandidate(data: {
   parentNotes?: string;
   customQuestions?: CustomQuestion[];
 }): Promise<Candidate> {
+  if (isPostgresActive()) return pgCreateCandidate(data);
   const db = loadDatabase();
   const token = `nanny_${Math.random().toString(36).substring(2, 10)}_${Date.now().toString(36)}`;
   const newCandidate: Candidate = {
@@ -621,6 +673,7 @@ export async function updateCandidate(
   id: string,
   updates: Partial<Candidate>
 ): Promise<Candidate | undefined> {
+  if (isPostgresActive()) return pgUpdateCandidate(id, updates);
   const db = loadDatabase();
   const index = db.candidates.findIndex((c) => c.id === id);
   if (index === -1) return undefined;
@@ -636,6 +689,7 @@ export async function updateCandidate(
 }
 
 export async function deleteCandidate(id: string, userId: string): Promise<boolean> {
+  if (isPostgresActive()) return pgDeleteCandidate(id, userId);
   const db = loadDatabase();
   const initialLength = db.candidates.length;
   db.candidates = db.candidates.filter((c) => !(c.id === id && c.userId === userId));
@@ -652,6 +706,7 @@ export async function saveCandidateSubmission(
   responses: CandidateResponse[],
   customAnswers?: CustomAnswer[]
 ): Promise<Candidate | undefined> {
+  if (isPostgresActive()) return pgSaveCandidateSubmission(token, profile, responses, customAnswers);
   const db = loadDatabase();
   const index = db.candidates.findIndex((c) => c.token === token);
   if (index === -1) return undefined;
@@ -671,7 +726,7 @@ export async function saveCandidateSubmission(
     updatedAt: new Date().toISOString(),
   };
 
-    saveDatabase(db);
+  saveDatabase(db);
   return db.candidates[index];
 }
 
@@ -680,11 +735,13 @@ export async function saveCandidateSubmission(
 // -------------------------------------------------------------
 
 export async function getAllUsers(): Promise<Omit<User, "passwordHash">[]> {
+  if (isPostgresActive()) return pgGetAllUsers();
   const db = loadDatabase();
   return db.users.map(({ passwordHash, ...rest }) => rest);
 }
 
 export async function getAllCandidates(): Promise<Candidate[]> {
+  if (isPostgresActive()) return pgGetAllCandidates();
   const db = loadDatabase();
   return db.candidates;
 }
@@ -694,6 +751,7 @@ export async function getAllCandidates(): Promise<Candidate[]> {
 // -------------------------------------------------------------
 
 export async function getNannyTalentPool(): Promise<Candidate[]> {
+  if (isPostgresActive()) return pgGetNannyTalentPool();
   const db = loadDatabase();
   // Any candidate with completed test or explicitly marked in talent pool
   return db.candidates.filter(
@@ -706,6 +764,7 @@ export async function updateCandidateTalentPool(
   inTalentPool: boolean,
   talentPoolStatus: "available" | "placed" | "review" = "available"
 ): Promise<Candidate | undefined> {
+  if (isPostgresActive()) return pgUpdateCandidateTalentPool(candidateId, inTalentPool, talentPoolStatus);
   const db = loadDatabase();
   const index = db.candidates.findIndex((c) => c.id === candidateId);
   if (index === -1) return undefined;
@@ -793,6 +852,7 @@ const SPECIALIZED_CARE_POOL: Candidate[] = [
 ];
 
 export async function getAvailableNannyPoolForParents(): Promise<Candidate[]> {
+  if (isPostgresActive()) return pgGetAvailableNannyPoolForParents();
   const db = loadDatabase();
   const allCandidates = [...db.candidates, ...SPECIALIZED_CARE_POOL];
   // Filter candidates suitable for parent pool browsing
@@ -816,16 +876,21 @@ export async function createCandidateFromPool(
   targetChildren: Child[],
   customQuestions?: CustomQuestion[]
 ): Promise<Candidate | null> {
-  const db = loadDatabase();
-  const poolCandidate = [...db.candidates, ...SPECIALIZED_CARE_POOL].find((c) => c.id === poolCandidateId);
-  if (!poolCandidate) return null;
-
   const targetLabel =
     targetChildren.length > 1
       ? `Hermanos: ${targetChildren.map((k) => k.name).join(" + ")}`
       : targetChildren[0]
       ? `${targetChildren[0].name} (${targetChildren[0].age} años)`
       : "Cuidado Infantil";
+
+  if (isPostgresActive()) {
+    const res = await pgCreateCandidateFromPool(userId, poolCandidateId, targetLabel, targetChildren);
+    return res || null;
+  }
+
+  const db = loadDatabase();
+  const poolCandidate = [...db.candidates, ...SPECIALIZED_CARE_POOL].find((c) => c.id === poolCandidateId);
+  if (!poolCandidate) return null;
 
   const cleanName = poolCandidate.name.toLowerCase().replace(/[^a-z]/g, "");
   const newToken = `tok_${cleanName}_${Math.random().toString(36).substring(2, 7)}`;
@@ -857,6 +922,7 @@ export async function createCandidateFromPool(
 // -------------------------------------------------------------
 
 export async function getAdCampaigns(): Promise<AdCampaign[]> {
+  if (isPostgresActive()) return pgGetAdCampaigns();
   const db = loadDatabase();
   return db.adCampaigns || DEFAULT_AD_CAMPAIGNS;
 }
@@ -864,6 +930,7 @@ export async function getAdCampaigns(): Promise<AdCampaign[]> {
 export async function createAdCampaign(
   data: Omit<AdCampaign, "id" | "impressions" | "clicks" | "createdAt">
 ): Promise<AdCampaign> {
+  if (isPostgresActive()) return pgCreateAdCampaign(data);
   const db = loadDatabase();
   if (!db.adCampaigns) db.adCampaigns = [];
 
@@ -884,6 +951,7 @@ export async function updateAdCampaign(
   id: string,
   updates: Partial<AdCampaign>
 ): Promise<AdCampaign | undefined> {
+  if (isPostgresActive()) return pgUpdateAdCampaign(id, updates);
   const db = loadDatabase();
   if (!db.adCampaigns) return undefined;
 
@@ -900,6 +968,7 @@ export async function updateAdCampaign(
 }
 
 export async function deleteAdCampaign(id: string): Promise<boolean> {
+  if (isPostgresActive()) return pgDeleteAdCampaign(id);
   const db = loadDatabase();
   if (!db.adCampaigns) return false;
 
@@ -913,6 +982,7 @@ export async function deleteAdCampaign(id: string): Promise<boolean> {
 }
 
 export async function trackAdImpression(id: string): Promise<void> {
+  if (isPostgresActive()) return pgTrackAdImpression(id);
   const db = loadDatabase();
   if (!db.adCampaigns) return;
   const ad = db.adCampaigns.find((a) => a.id === id);
@@ -923,6 +993,7 @@ export async function trackAdImpression(id: string): Promise<void> {
 }
 
 export async function trackAdClick(id: string): Promise<void> {
+  if (isPostgresActive()) return pgTrackAdClick(id);
   const db = loadDatabase();
   if (!db.adCampaigns) return;
   const ad = db.adCampaigns.find((a) => a.id === id);
@@ -937,6 +1008,7 @@ export async function getAdsForAge(
   placement?: AdPlacement,
   careCategory?: CareCategory | "all"
 ): Promise<AdCampaign[]> {
+  if (isPostgresActive()) return pgGetAdsForAge(age, placement);
   const db = loadDatabase();
   const ads = db.adCampaigns || DEFAULT_AD_CAMPAIGNS;
 
@@ -947,7 +1019,6 @@ export async function getAdsForAge(
       if (ad.careCategory && ad.careCategory !== "all") {
         return ad.careCategory === careCategory;
       }
-      // If ad doesn't specify careCategory, check age
       return age >= ad.targetMinAge && age <= ad.targetMaxAge;
     }
     return age >= ad.targetMinAge && age <= ad.targetMaxAge;
@@ -980,6 +1051,7 @@ export function applyAmazonAffiliateTag(url: string, tag: string): string {
 }
 
 export async function getAffiliateSettings(): Promise<AffiliateSettings> {
+  if (isPostgresActive()) return pgGetAffiliateSettings();
   const db = loadDatabase();
   return db.affiliateSettings || DEFAULT_AFFILIATE_SETTINGS;
 }
@@ -987,6 +1059,7 @@ export async function getAffiliateSettings(): Promise<AffiliateSettings> {
 export async function updateAffiliateSettings(
   updates: Partial<AffiliateSettings>
 ): Promise<AffiliateSettings> {
+  if (isPostgresActive()) return pgUpdateAffiliateSettings(updates);
   const db = loadDatabase();
   db.affiliateSettings = {
     ...(db.affiliateSettings || DEFAULT_AFFILIATE_SETTINGS),
@@ -998,6 +1071,7 @@ export async function updateAffiliateSettings(
 }
 
 export async function getAdminRecommendedProducts(): Promise<RecommendedProduct[]> {
+  if (isPostgresActive()) return pgGetAdminRecommendedProducts();
   const db = loadDatabase();
   return db.recommendedProducts || RECOMMENDED_PRODUCTS;
 }
@@ -1005,6 +1079,7 @@ export async function getAdminRecommendedProducts(): Promise<RecommendedProduct[
 export async function createRecommendedProduct(
   data: Omit<RecommendedProduct, "id">
 ): Promise<RecommendedProduct> {
+  if (isPostgresActive()) return pgCreateRecommendedProduct(data);
   const db = loadDatabase();
   if (!db.recommendedProducts) {
     db.recommendedProducts = [...RECOMMENDED_PRODUCTS];
@@ -1025,6 +1100,7 @@ export async function updateRecommendedProduct(
   id: string,
   updates: Partial<RecommendedProduct>
 ): Promise<RecommendedProduct | undefined> {
+  if (isPostgresActive()) return pgUpdateRecommendedProduct(id, updates);
   const db = loadDatabase();
   if (!db.recommendedProducts) {
     db.recommendedProducts = [...RECOMMENDED_PRODUCTS];
@@ -1042,6 +1118,7 @@ export async function updateRecommendedProduct(
 }
 
 export async function deleteRecommendedProduct(id: string): Promise<boolean> {
+  if (isPostgresActive()) return pgDeleteRecommendedProduct(id);
   const db = loadDatabase();
   if (!db.recommendedProducts) {
     db.recommendedProducts = [...RECOMMENDED_PRODUCTS];
@@ -1061,6 +1138,7 @@ export async function getPublicRecommendedProducts(
   category?: string,
   careCategory?: CareCategory | "all"
 ): Promise<{ products: RecommendedProduct[]; settings: AffiliateSettings }> {
+  if (isPostgresActive()) return pgGetPublicRecommendedProducts(category, careCategory, childAge);
   const db = loadDatabase();
   const settings = db.affiliateSettings || DEFAULT_AFFILIATE_SETTINGS;
   let products = (db.recommendedProducts || RECOMMENDED_PRODUCTS).filter((p) => p.active !== false);
@@ -1099,6 +1177,7 @@ export async function getPublicRecommendedProducts(
 // -------------------------------------------------------------
 
 export async function getUserQuestionBank(userId: string): Promise<QuestionBankGroup[]> {
+  if (isPostgresActive()) return pgGetUserQuestionBank(userId);
   const db = loadDatabase();
   const userCustomQuestions = (db.userQuestionBank || []).filter((q) => q.userId === userId || !q.userId);
 
@@ -1129,6 +1208,7 @@ export async function addQuestionToBank(
   userId: string,
   data: Omit<QuestionBankItem, "id">
 ): Promise<QuestionBankItem> {
+  if (isPostgresActive()) return pgAddQuestionToBank(userId, data);
   const db = loadDatabase();
   if (!db.userQuestionBank) db.userQuestionBank = [];
 
@@ -1145,6 +1225,7 @@ export async function addQuestionToBank(
 }
 
 export async function deleteQuestionFromBank(userId: string, questionId: string): Promise<boolean> {
+  if (isPostgresActive()) return pgDeleteQuestionFromBank(userId, questionId);
   const db = loadDatabase();
   if (!db.userQuestionBank) return false;
 
@@ -1165,6 +1246,7 @@ export async function deleteQuestionFromBank(userId: string, questionId: string)
 // -------------------------------------------------------------
 
 export async function getParentCampaigns(userId: string): Promise<ParentCampaign[]> {
+  if (isPostgresActive()) return pgGetParentCampaigns(userId);
   const db = loadDatabase();
   let campaigns = (db.parentCampaigns || []).filter((c) => c.userId === userId);
 
@@ -1203,6 +1285,7 @@ export async function createParentCampaign(
   userId: string,
   data: Omit<ParentCampaign, "id" | "userId" | "createdAt" | "publicToken">
 ): Promise<ParentCampaign> {
+  if (isPostgresActive()) return pgCreateParentCampaign(userId, data);
   const db = loadDatabase();
   if (!db.parentCampaigns) db.parentCampaigns = [];
 
@@ -1221,6 +1304,7 @@ export async function createParentCampaign(
 }
 
 export async function deleteParentCampaign(userId: string, campaignId: string): Promise<boolean> {
+  if (isPostgresActive()) return pgDeleteParentCampaign(userId, campaignId);
   const db = loadDatabase();
   if (!db.parentCampaigns) return false;
 

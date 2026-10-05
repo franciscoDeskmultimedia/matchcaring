@@ -16,6 +16,55 @@ Para que **MatchCaring Bio** guarde de forma permanente todos los usuarios, cand
 
 ---
 
+## 1.1. Arquitectura de Conexión en Código: Motor Dual Inteligente
+
+El proyecto cuenta con una integración nativa en tiempo real implementada en:
+- [`src/lib/postgres.ts`](file:///Users/franciscocornejo/Desktop/Projects/personelBio/src/lib/postgres.ts): Driver de conexión directa con PostgreSQL mediante `pg` (node-postgres), con pool de conexiones (`Pool`) optimizado para Serverless y SSL `{ rejectUnauthorized: false }`.
+- [`src/lib/db.ts`](file:///Users/franciscocornejo/Desktop/Projects/personelBio/src/lib/db.ts): Capa de acceso a datos unificada que detecta automáticamente el entorno.
+
+### ¿Cómo se conecta el proyecto a PostgreSQL en vez de SQLite/JSON?
+
+```mermaid
+graph TD
+    API["Cualquier Endpoint de API (/api/auth, /api/candidates, etc.)"] --> DB["src/lib/db.ts"]
+    DB --> Check{"¿Existe POSTGRES_URL o DATABASE_URL?"}
+    Check -- "SÍ (Producción Vercel o .env.local)" --> PG["src/lib/postgres.ts -> Neon PostgreSQL (SSL)"]
+    Check -- "NO (Desarrollo local sin DB)" --> Local["data/db.json (Fallback local)"]
+    PG --> Query["Lectura / Escritura en Neon Cloud"]
+```
+
+### Características Clave de la Conexión:
+
+1. **Detección Automática de Entorno (`isPostgresActive`):**
+   Tan pronto como configuras la variable `POSTGRES_URL` (en Vercel o en tu `.env.local`), **todas las 39 operaciones de la plataforma** se desvían de inmediato a PostgreSQL:
+   - Registro e inicio de sesión de usuarios (`/api/auth/*`)
+   - Creación y evaluación psicológica de candidatas (`/api/candidates/*`, `/api/test/*`)
+   - Campañas familiares de cuidado infantil, adulto mayor y discapacidad (`/api/campaigns/*`)
+   - Anuncios publicitarios, tracking de impresiones y clics (`/api/ads/*`, `/api/admin/ads`)
+   - Configuración de afiliados de Amazon y productos recomendados (`/api/affiliates`, `/api/admin/affiliates`)
+   - Banco de preguntas personalizadas (`/api/question-bank`)
+   - Pool de talentos y candidatas recomendadas (`/api/nanny-pool`, `/api/admin/nannies`)
+
+2. **Esquema Autocurativo (Self-Healing DDL):**
+   Al arrancar o recibir la primera petición, `ensurePostgresSchema()` verifica si las 7 tablas e índices existen en Neon. Si no existen, **las crea automáticamente** en milisegundos sin requerir scripts manuales.
+
+3. **Pool de Conexiones Serverless:**
+   Utiliza un singleton `Pool` configurado específicamente para entornos Serverless de Vercel:
+   ```typescript
+   globalPool = new Pool({
+     connectionString: process.env.POSTGRES_URL || process.env.DATABASE_URL,
+     ssl: { rejectUnauthorized: false },
+     max: 10,
+     idleTimeoutMillis: 30000,
+     connectionTimeoutMillis: 10000,
+   });
+   ```
+
+4. **100% Cero Fricción en API Routes:**
+   Ningún endpoint de `src/app/api/...` tuvo que modificarse, ya que todas las funciones exportadas de `db.ts` (`getUserByEmail`, `createCandidate`, `saveCandidateSubmission`, etc.) son asíncronas (`async/await`) y entregan exactamente las mismas estructuras de datos tipadas (`TypeScript`).
+
+---
+
 ## 2. Flujo Completo de Despliegue y Migración Paso a Paso
 
 ```mermaid
