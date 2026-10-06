@@ -207,8 +207,8 @@ export const DICTIONARY = {
     countryOfResidence: "Country of Residence *",
     selectCountry: "Select country...",
     mobileNumber: "Mobile Phone Number *",
-    askHourlyRateLabel: "Request Hourly Rate in Candidate Form",
-    askHourlyRateDesc: "If enabled, candidates enter their desired hourly rate. If unchecked, this question will not appear in the nanny form.",
+    askHourlyRateLabel: "Request Hourly Rate in Caregiver Form",
+    askHourlyRateDesc: "If enabled, caregivers enter their desired hourly rate. If unchecked, this question will not appear in their questionnaire.",
     hourlyRateHiddenNotice: "Hourly rate field omitted per family instructions",
 
     // Custom Questions
@@ -475,8 +475,8 @@ export const DICTIONARY = {
     countryOfResidence: "País de Residencia *",
     selectCountry: "Seleccionar país...",
     mobileNumber: "Teléfono Celular / Móvil *",
-    askHourlyRateLabel: "Solicitar tarifa por hora en el formulario de la niñera",
-    askHourlyRateDesc: "Si está activado, la niñera indicará su pretensión económica. Si lo desmarcas, este campo no aparecerá en su cuestionario.",
+    askHourlyRateLabel: "Solicitar tarifa por hora en el formulario del cuidador/a",
+    askHourlyRateDesc: "Si está activado, el cuidador/a indicará su pretensión económica. Si lo desmarcas, este campo no aparecerá en su cuestionario.",
     hourlyRateHiddenNotice: "Campo de tarifa por hora omitido por solicitud de la familia",
 
     // Custom Questions

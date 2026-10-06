@@ -54,6 +54,8 @@ export default function CandidateTestPage({
   const [candidateInfo, setCandidateInfo] = useState<{
     id: string;
     name: string;
+    phone?: string;
+    email?: string;
     roleTarget: string;
     askHourlyRate?: boolean;
     alreadyCompleted: boolean;
@@ -128,10 +130,14 @@ export default function CandidateTestPage({
       setCandidateInfo(data.candidate);
       setQuestions(data.questions || []);
 
-      if (data.candidate?.name) {
+      if (data.candidate) {
         setProfile((prev) => ({
           ...prev,
-          fullName: data.candidate.name,
+          fullName: data.candidate.name || prev.fullName,
+          phone: data.candidate.phone || prev.phone,
+          email: data.candidate.email || prev.email,
+          preferredHourlyRate:
+            data.candidate.askHourlyRate === false ? "" : prev.preferredHourlyRate,
         }));
       }
 

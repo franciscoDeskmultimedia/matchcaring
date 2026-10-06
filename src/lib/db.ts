@@ -61,6 +61,7 @@ import {
   pgDeleteQuestionFromBank,
   pgGetParentCampaigns,
   pgCreateParentCampaign,
+  pgUpdateParentCampaign,
   pgDeleteParentCampaign,
   pgShareParentCampaign,
   pgJoinParentCampaignByCode,
@@ -1204,6 +1205,36 @@ export async function joinParentCampaignByCode(
   saveDatabase(db);
 
   return { success: true, campaign };
+}
+
+export async function updateParentCampaign(
+  userId: string,
+  campaignId: string,
+  updates: Partial<ParentCampaign>
+): Promise<ParentCampaign | null> {
+  if (isPostgresActive()) return pgUpdateParentCampaign(userId, campaignId, updates);
+  const db = loadDatabase();
+  if (!db.parentCampaigns) return null;
+
+  const idx = db.parentCampaigns.findIndex(
+    (c) =>
+      c.id === campaignId &&
+      (c.userId === userId || (c.sharedWithUserIds && c.sharedWithUserIds.includes(userId)))
+  );
+  if (idx === -1) return null;
+
+  const current = db.parentCampaigns[idx];
+  const updated: ParentCampaign = {
+    ...current,
+    ...updates,
+    id: current.id,
+    userId: current.userId,
+    createdAt: current.createdAt,
+  };
+
+  db.parentCampaigns[idx] = updated;
+  saveDatabase(db);
+  return updated;
 }
 
 export async function deleteParentCampaign(userId: string, campaignId: string): Promise<boolean> {

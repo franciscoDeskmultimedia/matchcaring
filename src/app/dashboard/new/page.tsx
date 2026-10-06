@@ -137,15 +137,33 @@ export default function NewCandidatePage() {
       const targetModeParam = urlParams?.get("mode");
       const targetCampParam = urlParams?.get("campaignId");
 
-      if (targetCampParam) {
-        setCampaignId(targetCampParam);
-      }
-
       let initialSelectedIds = allIds;
       if (targetChildParam && kids.some((k) => k.id === targetChildParam)) {
         initialSelectedIds = [targetChildParam];
       } else if (targetModeParam === "siblings" || targetModeParam === "all") {
         initialSelectedIds = allIds;
+      }
+
+      if (targetCampParam) {
+        setCampaignId(targetCampParam);
+        try {
+          const campRes = await fetch("/api/campaigns");
+          if (campRes.ok) {
+            const campData = await campRes.json();
+            const matched = (campData.campaigns || []).find((c: any) => c.id === targetCampParam);
+            if (matched) {
+              if (matched.customQuestions && matched.customQuestions.length > 0) {
+                setCustomQuestions(matched.customQuestions);
+              }
+              if (matched.targetChildren && matched.targetChildren.length > 0) {
+                const campChildIds = matched.targetChildren.map((tc: any) => tc.id);
+                initialSelectedIds = campChildIds;
+              }
+            }
+          }
+        } catch (cErr) {
+          console.error("Error preloading campaign in invitation:", cErr);
+        }
       }
 
       setSelectedChildIds(initialSelectedIds);

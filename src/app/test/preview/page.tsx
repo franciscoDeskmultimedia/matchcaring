@@ -31,6 +31,25 @@ import {
   Wand2,
 } from "lucide-react";
 
+function seededShuffle<T>(array: T[], seedStr: string): T[] {
+  const result = [...array];
+  let seed = 0;
+  for (let i = 0; i < seedStr.length; i++) {
+    seed = (Math.imul(31, seed) + seedStr.charCodeAt(i)) | 0;
+  }
+  const random = () => {
+    let t = (seed += 0x6d2b79f5);
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(random() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result;
+}
+
 export default function TestPreviewPage() {
   const { t, language } = useLanguage();
 
@@ -968,7 +987,7 @@ export default function TestPreviewPage() {
 
                       {/* Options */}
                       <div className="space-y-3">
-                        {q.options.map((opt, idx) => {
+                        {seededShuffle(q.options, `preview-${q.id}`).map((opt, idx) => {
                           const isSelected = selectedOptionId === opt.id;
                           const optionLetter = String.fromCharCode(65 + idx);
                           const optText = language === "es" && opt.textEs ? opt.textEs : opt.text;

@@ -117,6 +117,7 @@ export async function ensurePostgresSchema(): Promise<void> {
       CREATE INDEX IF NOT EXISTS idx_candidates_user ON candidates(user_id);
       CREATE INDEX IF NOT EXISTS idx_candidates_token ON candidates(token);
       ALTER TABLE candidates ADD COLUMN IF NOT EXISTS campaign_id VARCHAR(64);
+      ALTER TABLE candidates ADD COLUMN IF NOT EXISTS ask_hourly_rate BOOLEAN DEFAULT true;
       CREATE INDEX IF NOT EXISTS idx_candidates_campaign ON candidates(campaign_id);
 
       CREATE TABLE IF NOT EXISTS parent_campaigns (
@@ -139,6 +140,7 @@ export async function ensurePostgresSchema(): Promise<void> {
       ALTER TABLE parent_campaigns ADD COLUMN IF NOT EXISTS share_code VARCHAR(64);
       ALTER TABLE parent_campaigns ADD COLUMN IF NOT EXISTS shared_with_emails JSONB DEFAULT '[]'::jsonb;
       ALTER TABLE parent_campaigns ADD COLUMN IF NOT EXISTS shared_with_user_ids JSONB DEFAULT '[]'::jsonb;
+      ALTER TABLE parent_campaigns ADD COLUMN IF NOT EXISTS custom_questions JSONB DEFAULT '[]'::jsonb;
 
       CREATE TABLE IF NOT EXISTS ad_campaigns (
           id VARCHAR(64) PRIMARY KEY,
@@ -382,6 +384,7 @@ function mapCandidateRow(row: any): Candidate {
     phone: row.phone || undefined,
     email: row.email || undefined,
     status: row.status,
+    askHourlyRate: row.ask_hourly_rate !== null && row.ask_hourly_rate !== undefined ? row.ask_hourly_rate : true,
     targetChildren: typeof row.target_children === "string" ? JSON.parse(row.target_children) : row.target_children || undefined,
     customQuestions: typeof row.parent_custom_questions === "string" ? JSON.parse(row.parent_custom_questions) : row.parent_custom_questions || undefined,
     customAnswers: typeof row.parent_custom_responses === "string" ? JSON.parse(row.parent_custom_responses) : row.parent_custom_responses || undefined,
@@ -437,18 +440,21 @@ export async function pgCreateCandidate(data: {
   parentNotes?: string;
   targetChildren?: Child[];
   parentCustomQuestions?: any[];
+  customQuestions?: any[];
+  askHourlyRate?: boolean;
 }): Promise<Candidate> {
   await ensurePostgresSchema();
   const pool = getPostgresPool();
   const id = `cand_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
   const token = `tok_${Math.random().toString(36).substring(2, 10)}_${Date.now().toString(36)}`;
   const now = new Date().toISOString();
+  const customQuestionsPayload = data.customQuestions || data.parentCustomQuestions || null;
 
   const res = await pool.query(
     `INSERT INTO candidates (
        id, user_id, campaign_id, token, name, role_target, phone, email, status,
-       target_children, parent_custom_questions, parent_notes, created_at, updated_at
-     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'invited', $9, $10, $11, $12, $12)
+       ask_hourly_rate, target_children, parent_custom_questions, parent_notes, created_at, updated_at
+     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'invited', $9, $10, $11, $12, $13, $13)
      RETURNING *`,
     [
       id,
@@ -459,8 +465,9 @@ export async function pgCreateCandidate(data: {
       data.roleTarget,
       data.phone || null,
       data.email || null,
+      data.askHourlyRate !== undefined ? Boolean(data.askHourlyRate) : true,
       JSON.stringify(data.targetChildren || null),
-      JSON.stringify(data.parentCustomQuestions || null),
+      JSON.stringify(customQuestionsPayload),
       data.parentNotes || null,
       now,
     ]
@@ -1095,6 +1102,7 @@ function mapCampaignRow(row: any): ParentCampaign {
     expectedHourlyRate: row.expected_hourly_rate || undefined,
     startDate: row.start_date || undefined,
     notes: row.notes || undefined,
+    customQuestions: typeof row.custom_questions === "string" ? JSON.parse(row.custom_questions) : row.custom_questions || [],
     active: row.active !== false,
     publicToken: row.public_token || undefined,
     shareCode: row.share_code || undefined,
@@ -1154,9 +1162,9 @@ export async function pgCreateParentCampaign(
   const res = await pool.query(
     `INSERT INTO parent_campaigns (
        id, user_id, title, care_category, target_children, schedule_type,
-       expected_hourly_rate, start_date, notes, active, public_token, share_code,
+       expected_hourly_rate, start_date, notes, custom_questions, active, public_token, share_code,
        shared_with_emails, shared_with_user_ids, created_at
-     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,NOW())
+     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,NOW())
      RETURNING *`,
     [
       id,
@@ -1168,6 +1176,7 @@ export async function pgCreateParentCampaign(
       data.expectedHourlyRate || "$25 - $30 / hr",
       data.startDate || "Inmediata",
       data.notes || null,
+      JSON.stringify(data.customQuestions || []),
       data.active !== false,
       publicToken,
       data.shareCode || shareCode,
@@ -1176,6 +1185,61 @@ export async function pgCreateParentCampaign(
     ]
   );
   return mapCampaignRow(res.rows[0]);
+}
+
+export async function pgUpdateParentCampaign(
+  userId: string,
+  campaignId: string,
+  updates: Partial<ParentCampaign>
+): Promise<ParentCampaign | null> {
+  await ensurePostgresSchema();
+  const pool = getPostgresPool();
+
+  const check = await pool.query(
+    "SELECT * FROM parent_campaigns WHERE id = $1 AND (user_id = $2 OR shared_with_user_ids @> to_jsonb($2::text)) LIMIT 1",
+    [campaignId, userId]
+  );
+  if (check.rows.length === 0) return null;
+  const current = mapCampaignRow(check.rows[0]);
+
+  const newTitle = updates.title !== undefined ? updates.title : current.title;
+  const newCareCategory = updates.careCategory !== undefined ? updates.careCategory : current.careCategory;
+  const newTargetChildren = updates.targetChildren !== undefined ? updates.targetChildren : current.targetChildren;
+  const newScheduleType = updates.scheduleType !== undefined ? updates.scheduleType : current.scheduleType;
+  const newExpectedHourlyRate = updates.expectedHourlyRate !== undefined ? updates.expectedHourlyRate : current.expectedHourlyRate;
+  const newStartDate = updates.startDate !== undefined ? updates.startDate : current.startDate;
+  const newNotes = updates.notes !== undefined ? updates.notes : current.notes;
+  const newCustomQuestions = updates.customQuestions !== undefined ? updates.customQuestions : (current.customQuestions || []);
+  const newActive = updates.active !== undefined ? updates.active : current.active;
+
+  const res = await pool.query(
+    `UPDATE parent_campaigns SET
+       title = $1,
+       care_category = $2,
+       target_children = $3,
+       schedule_type = $4,
+       expected_hourly_rate = $5,
+       start_date = $6,
+       notes = $7,
+       custom_questions = $8,
+       active = $9
+     WHERE id = $10
+     RETURNING *`,
+    [
+      newTitle,
+      newCareCategory,
+      JSON.stringify(newTargetChildren),
+      newScheduleType,
+      newExpectedHourlyRate,
+      newStartDate,
+      newNotes,
+      JSON.stringify(newCustomQuestions),
+      newActive,
+      campaignId,
+    ]
+  );
+
+  return res.rows.length > 0 ? mapCampaignRow(res.rows[0]) : null;
 }
 
 export async function pgShareParentCampaign(

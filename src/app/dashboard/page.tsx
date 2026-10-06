@@ -25,6 +25,7 @@ import {
   ExternalLink,
   Eye,
   Layers,
+  Pencil,
   Plus,
   Search,
   Settings2,
@@ -64,6 +65,7 @@ export default function DashboardPage() {
   const [campaigns, setCampaigns] = useState<ParentCampaign[]>([]);
   const [selectedCampaignId, setSelectedCampaignId] = useState<string | null>(null);
   const [isCreateCampaignOpen, setIsCreateCampaignOpen] = useState(false);
+  const [editingCampaign, setEditingCampaign] = useState<ParentCampaign | null>(null);
   const [isQuestionBankOpen, setIsQuestionBankOpen] = useState(false);
   const [copiedCampaignId, setCopiedCampaignId] = useState<string | null>(null);
 
@@ -477,7 +479,10 @@ export default function DashboardPage() {
                 {/* Header Action Buttons */}
                 <div className="flex flex-wrap items-center gap-2.5">
                   <button
-                    onClick={() => setIsCreateCampaignOpen(true)}
+                    onClick={() => {
+                      setEditingCampaign(null);
+                      setIsCreateCampaignOpen(true);
+                    }}
                     className="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-gradient-to-r from-sky-500 to-indigo-500 hover:from-sky-400 hover:to-indigo-400 text-white font-black text-xs sm:text-sm shadow-xl shadow-sky-500/25 transition-all active:scale-95 shrink-0 cursor-pointer"
                   >
                     <Plus className="w-4 h-4 stroke-[3]" />
@@ -571,7 +576,10 @@ export default function DashboardPage() {
                       : "Create a campaign to define recipient, schedule, and key questions to evaluate caregivers."}
                   </p>
                   <button
-                    onClick={() => setIsCreateCampaignOpen(true)}
+                    onClick={() => {
+                      setEditingCampaign(null);
+                      setIsCreateCampaignOpen(true);
+                    }}
                     className="px-6 py-3 bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 text-white rounded-xl text-xs font-black shadow-lg shadow-sky-600/20 transition-all cursor-pointer"
                   >
                     {language === "es"
@@ -754,11 +762,30 @@ export default function DashboardPage() {
                             <ArrowRight className="w-3.5 h-3.5" />
                           </button>
 
-                          <div className="grid grid-cols-2 gap-2">
+                          <div className="grid grid-cols-3 gap-2">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditingCampaign(camp);
+                                setIsCreateCampaignOpen(true);
+                              }}
+                              className="py-2 px-2 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-800 font-bold text-xs transition-all flex items-center justify-center gap-1 cursor-pointer"
+                              title={
+                                language === "es"
+                                  ? "Editar detalles o banco de preguntas"
+                                  : "Edit campaign & questions"
+                              }
+                            >
+                              <Pencil className="w-3 h-3 text-slate-600" />
+                              <span>
+                                {language === "es" ? "Editar" : "Edit"}
+                              </span>
+                            </button>
+
                             <button
                               type="button"
                               onClick={() => setShareCampaign(camp)}
-                              className="py-2 px-2.5 rounded-xl bg-purple-50 hover:bg-purple-100 border border-purple-200 text-purple-900 font-bold text-xs transition-all flex items-center justify-center gap-1 cursor-pointer"
+                              className="py-2 px-2 rounded-xl bg-purple-50 hover:bg-purple-100 border border-purple-200 text-purple-900 font-bold text-xs transition-all flex items-center justify-center gap-1 cursor-pointer"
                               title={
                                 language === "es"
                                   ? "Compartir con cónyuge o familiar"
@@ -773,7 +800,7 @@ export default function DashboardPage() {
 
                             <Link
                               href={`/dashboard/new?campaignId=${camp.id}`}
-                              className="py-2 px-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs transition-all flex items-center justify-center gap-1 cursor-pointer"
+                              className="py-2 px-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs transition-all flex items-center justify-center gap-1 cursor-pointer"
                               title={
                                 language === "es"
                                   ? "Crear evaluación para esta campaña"
@@ -782,7 +809,7 @@ export default function DashboardPage() {
                             >
                               <UserPlus className="w-3 h-3 text-sky-400" />
                               <span>
-                                {language === "es" ? "+ Evaluar" : "+ Evaluate"}
+                                {language === "es" ? "+ Evaluar" : "+ Invite"}
                               </span>
                             </Link>
                           </div>
@@ -866,7 +893,10 @@ export default function DashboardPage() {
                 </div>
 
                 <button
-                  onClick={() => setIsCreateCampaignOpen(true)}
+                  onClick={() => {
+                    setEditingCampaign(null);
+                    setIsCreateCampaignOpen(true);
+                  }}
                   className="px-3 py-1.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-black shadow-xs cursor-pointer flex items-center gap-1"
                 >
                   <Plus className="w-3.5 h-3.5" />
@@ -982,6 +1012,21 @@ export default function DashboardPage() {
                         : "+ Evaluate Candidate"}
                     </span>
                   </Link>
+
+                  <button
+                    onClick={() => {
+                      setEditingCampaign(activeCampaign);
+                      setIsCreateCampaignOpen(true);
+                    }}
+                    className="inline-flex items-center gap-2 px-4 py-3 rounded-2xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs sm:text-sm border border-white/20 backdrop-blur-md transition-all active:scale-95 cursor-pointer"
+                  >
+                    <Pencil className="w-4 h-4 text-sky-300" />
+                    <span>
+                      {language === "es"
+                        ? "Editar Campaña"
+                        : "Edit Campaign"}
+                    </span>
+                  </button>
 
                   <button
                     onClick={() => setShareCampaign(activeCampaign)}
@@ -1655,14 +1700,26 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Create Campaign Wizard Modal */}
+      {/* Create / Edit Campaign Wizard Modal */}
       <CreateCampaignModal
         isOpen={isCreateCampaignOpen}
-        onClose={() => setIsCreateCampaignOpen(false)}
+        onClose={() => {
+          setIsCreateCampaignOpen(false);
+          setEditingCampaign(null);
+        }}
         childrenList={childrenList}
+        campaignToEdit={editingCampaign}
+        onChildAdded={(newChild) => {
+          setChildrenList((prev) => [...prev, newChild]);
+        }}
         onCampaignCreated={(newCamp) => {
           setCampaigns((prev) => [newCamp, ...prev]);
           handleSelectCampaign(newCamp.id);
+        }}
+        onCampaignUpdated={(updatedCamp) => {
+          setCampaigns((prev) =>
+            prev.map((c) => (c.id === updatedCamp.id ? updatedCamp : c))
+          );
         }}
       />
 

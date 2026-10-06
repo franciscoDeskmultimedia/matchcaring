@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { CareCategory, Child, CustomQuestion, ParentCampaign } from "@/lib/types";
 import { useLanguage } from "./LanguageContext";
 import QuestionBankModal from "./QuestionBankModal";
@@ -27,19 +27,26 @@ interface CreateCampaignModalProps {
   isOpen: boolean;
   onClose: () => void;
   childrenList: Child[];
+  campaignToEdit?: ParentCampaign | null;
   onCampaignCreated: (campaign: ParentCampaign) => void;
+  onCampaignUpdated?: (campaign: ParentCampaign) => void;
+  onChildAdded?: (child: Child) => void;
 }
 
 export default function CreateCampaignModal({
   isOpen,
   onClose,
   childrenList,
+  campaignToEdit,
   onCampaignCreated,
+  onCampaignUpdated,
+  onChildAdded,
 }: CreateCampaignModalProps) {
   const { language } = useLanguage();
 
   const [careCategory, setCareCategory] = useState<CareCategory>("childcare");
   const [title, setTitle] = useState("");
+  const [localChildren, setLocalChildren] = useState<Child[]>(childrenList);
   const [selectedChildIds, setSelectedChildIds] = useState<string[]>(
     childrenList.map((c) => c.id)
   );
@@ -56,6 +63,48 @@ export default function CreateCampaignModal({
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
+  // Inline Quick Add Person / Family Member
+  const [isAddingPerson, setIsAddingPerson] = useState(false);
+  const [newPersonName, setNewPersonName] = useState("");
+  const [newPersonAge, setNewPersonAge] = useState("");
+  const [newPersonNotes, setNewPersonNotes] = useState("");
+  const [addingPersonLoading, setAddingPersonLoading] = useState(false);
+
+  // Sync state when opening or when campaignToEdit / childrenList change
+  useEffect(() => {
+    setLocalChildren(childrenList);
+  }, [childrenList]);
+
+  useEffect(() => {
+    if (campaignToEdit) {
+      setTitle(campaignToEdit.title);
+      setCareCategory(campaignToEdit.careCategory || "childcare");
+      const kidIds =
+        campaignToEdit.targetChildren && campaignToEdit.targetChildren.length > 0
+          ? campaignToEdit.targetChildren.map((c) => c.id)
+          : [];
+      setSelectedChildIds(kidIds);
+      setScheduleType(campaignToEdit.scheduleType || "full_time");
+      setExpectedHourlyRate(campaignToEdit.expectedHourlyRate || "");
+      setStartDate(
+        campaignToEdit.startDate || (language === "es" ? "Inmediato" : "Immediate")
+      );
+      setNotes(campaignToEdit.notes || "");
+      setCustomQuestions(campaignToEdit.customQuestions || []);
+    } else {
+      setTitle("");
+      setCareCategory("childcare");
+      setSelectedChildIds(childrenList.map((c) => c.id));
+      setScheduleType("full_time");
+      setExpectedHourlyRate("");
+      setStartDate(language === "es" ? "Inmediato" : "Immediate");
+      setNotes("");
+      setCustomQuestions([]);
+    }
+    setErrorMsg("");
+    setIsAddingPerson(false);
+  }, [campaignToEdit, isOpen, childrenList, language]);
+
   if (!isOpen) return null;
 
   const toggleChild = (id: string) => {
@@ -66,6 +115,52 @@ export default function CreateCampaignModal({
           : prev
         : [...prev, id]
     );
+  };
+
+  const handleQuickAddPerson = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newPersonName.trim()) return;
+    const ageNum = parseInt(newPersonAge, 10);
+    if (isNaN(ageNum) || ageNum < 0 || ageNum > 120) {
+      setErrorMsg(
+        language === "es"
+          ? "Ingresa una edad válida (0 a 120 años)"
+          : "Please enter a valid age (0 to 120)"
+      );
+      return;
+    }
+
+    setAddingPersonLoading(true);
+    setErrorMsg("");
+    try {
+      const res = await fetch("/api/children", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: newPersonName.trim(),
+          age: ageNum,
+          notes: newPersonNotes.trim(),
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const created: Child = data.child;
+        setLocalChildren((prev) => [...prev, created]);
+        setSelectedChildIds((prev) => [...prev, created.id]);
+        onChildAdded?.(created);
+        setNewPersonName("");
+        setNewPersonAge("");
+        setNewPersonNotes("");
+        setIsAddingPerson(false);
+      } else {
+        const err = await res.json();
+        setErrorMsg(err.error || "Failed to add person");
+      }
+    } catch (err: any) {
+      setErrorMsg(err.message || "Network error");
+    } finally {
+      setAddingPersonLoading(false);
+    }
   };
 
   const handleAddBankQuestions = (qs: CustomQuestion[]) => {
@@ -87,33 +182,49 @@ export default function CreateCampaignModal({
     setErrorMsg("");
 
     try {
-      const targetKids = childrenList.filter((k) =>
+      const targetKids = localChildren.filter((k) =>
         selectedChildIds.includes(k.id)
       );
 
-      const res = await fetch("/api/campaigns", {
-        method: "POST",
+      const isEdit = Boolean(campaignToEdit);
+      const endpoint = "/api/campaigns";
+      const method = isEdit ? "PUT" : "POST";
+      const payload: any = {
+        title: title.trim(),
+        careCategory,
+        targetChildren: targetKids,
+        scheduleType,
+        expectedHourlyRate: expectedHourlyRate.trim(),
+        startDate: startDate.trim(),
+        notes: notes.trim(),
+        customQuestions,
+        active: true,
+      };
+
+      if (isEdit && campaignToEdit) {
+        payload.id = campaignToEdit.id;
+      }
+
+      const res = await fetch(endpoint, {
+        method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: title.trim(),
-          careCategory,
-          targetChildren: targetKids,
-          scheduleType,
-          expectedHourlyRate: expectedHourlyRate.trim(),
-          startDate: startDate.trim(),
-          notes: notes.trim(),
-          customQuestions,
-          active: true,
-        }),
+        body: JSON.stringify(payload),
       });
 
       if (res.ok) {
         const data = await res.json();
-        onCampaignCreated(data.campaign);
+        if (isEdit && onCampaignUpdated) {
+          onCampaignUpdated(data.campaign);
+        } else {
+          onCampaignCreated(data.campaign);
+        }
         onClose();
       } else {
         const err = await res.json();
-        setErrorMsg(err.error || "Failed to create campaign");
+        setErrorMsg(
+          err.error ||
+            (isEdit ? "Failed to update campaign" : "Failed to create campaign")
+        );
       }
     } catch (err: any) {
       setErrorMsg(err.message || "Network error");
@@ -121,6 +232,8 @@ export default function CreateCampaignModal({
       setSubmitting(false);
     }
   };
+
+  const isEditMode = Boolean(campaignToEdit);
 
   return (
     <>
@@ -134,14 +247,22 @@ export default function CreateCampaignModal({
               </div>
               <div>
                 <h2 className="text-lg font-black text-slate-900 tracking-tight">
-                  {language === "es"
+                  {isEditMode
+                    ? language === "es"
+                      ? "Editar Campaña de Selección"
+                      : "Edit Screening Campaign"
+                    : language === "es"
                     ? "Crear Nueva Campaña de Selección"
                     : "Create New Screening Campaign"}
                 </h2>
                 <p className="text-xs text-slate-500">
-                  {language === "es"
-                    ? "Configura la búsqueda específica para tus hijos, horario y preguntas clave."
-                    : "Configure a targeted search for your children, schedule, and key questions."}
+                  {isEditMode
+                    ? language === "es"
+                      ? "Modifica datos de la búsqueda, familiar/persona a cuidar o preguntas clave."
+                      : "Update role details, person to care for, or key questions."
+                    : language === "es"
+                    ? "Configura la búsqueda específica, personas a cuidar, horario y preguntas clave."
+                    : "Configure targeted search, care recipients, schedule, and key questions."}
                 </p>
               </div>
             </div>
@@ -275,15 +396,30 @@ export default function CreateCampaignModal({
               />
             </div>
 
-            {/* Target Children */}
+            {/* Target Children / Care Recipients */}
             <div className="space-y-2">
-              <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
-                {language === "es"
-                  ? "¿Para qué hijo(s) es esta campaña? *"
-                  : "Which child(ren) is this campaign for? *"}
-              </label>
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
+                  {language === "es"
+                    ? "3. ¿Para quién o qué familiar/persona a cuidar es esta campaña? *"
+                    : "3. Who is this campaign for? (Family Member / Person to Care For) *"}
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setIsAddingPerson((prev) => !prev)}
+                  className="inline-flex items-center gap-1 text-xs font-bold text-sky-600 hover:text-sky-700 cursor-pointer"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>
+                    {language === "es"
+                      ? "+ Registrar Familiar / Persona"
+                      : "+ Register Care Recipient"}
+                  </span>
+                </button>
+              </div>
+
               <div className="flex flex-wrap gap-2">
-                {childrenList.map((kid) => {
+                {localChildren.map((kid) => {
                   const isSelected = selectedChildIds.includes(kid.id);
                   return (
                     <button
@@ -304,7 +440,128 @@ export default function CreateCampaignModal({
                     </button>
                   );
                 })}
+
+                <button
+                  type="button"
+                  onClick={() => setIsAddingPerson((prev) => !prev)}
+                  className="px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer border border-dashed border-sky-400 bg-sky-50/70 text-sky-700 hover:bg-sky-100"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>
+                    {language === "es"
+                      ? "Agregar a alguien más"
+                      : "Add someone else"}
+                  </span>
+                </button>
               </div>
+
+              {/* Inline Quick Add Person Form */}
+              {isAddingPerson && (
+                <div className="mt-3 p-4 rounded-2xl bg-gradient-to-r from-sky-50/90 to-indigo-50/70 border border-sky-200 space-y-3 animate-in fade-in">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-sky-900 flex items-center gap-1.5">
+                      <Users2 className="w-4 h-4 text-sky-600" />
+                      {language === "es"
+                        ? "Registrar Nuevo Familiar o Persona a Cuidar"
+                        : "Register Care Recipient"}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setIsAddingPerson(false)}
+                      className="text-slate-400 hover:text-slate-700 text-xs p-1"
+                    >
+                      ✕
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                    <div className="sm:col-span-2">
+                      <label className="text-[11px] font-bold text-slate-600 block mb-1">
+                        {language === "es" ? "Nombre o Apodo *" : "Name *"}
+                      </label>
+                      <input
+                        type="text"
+                        value={newPersonName}
+                        onChange={(e) => setNewPersonName(e.target.value)}
+                        placeholder={
+                          careCategory === "elderly_care"
+                            ? language === "es"
+                              ? "Ej: Abuela Carmen"
+                              : "e.g. Grandma Carmen"
+                            : language === "es"
+                            ? "Ej: Sofía, Lucas"
+                            : "e.g. Sofia, Lucas"
+                        }
+                        className="w-full px-3 py-2 text-xs bg-white border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-sky-500 font-medium"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[11px] font-bold text-slate-600 block mb-1">
+                        {language === "es" ? "Edad (Años) *" : "Age (Years) *"}
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="120"
+                        value={newPersonAge}
+                        onChange={(e) => setNewPersonAge(e.target.value)}
+                        placeholder={
+                          careCategory === "elderly_care" ? "78" : "3"
+                        }
+                        className="w-full px-3 py-2 text-xs bg-white border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-sky-500 font-medium"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-[11px] font-bold text-slate-600 block mb-1">
+                      {language === "es"
+                        ? "Detalles de cuidado o salud (opcional)"
+                        : "Health or care notes (optional)"}
+                    </label>
+                    <input
+                      type="text"
+                      value={newPersonNotes}
+                      onChange={(e) => setNewPersonNotes(e.target.value)}
+                      placeholder={
+                        language === "es"
+                          ? "Ej: Alergia a medicamentos, horarios de comida, movilidad reducida"
+                          : "e.g. Medication schedule, meal times, mobility notes"
+                      }
+                      className="w-full px-3 py-2 text-xs bg-white border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-sky-500"
+                    />
+                  </div>
+
+                  <div className="flex justify-end items-center gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => setIsAddingPerson(false)}
+                      className="px-3 py-1.5 text-xs font-semibold text-slate-600 hover:text-slate-800 cursor-pointer"
+                    >
+                      {language === "es" ? "Cancelar" : "Cancel"}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={
+                        addingPersonLoading || !newPersonName.trim() || !newPersonAge
+                      }
+                      onClick={handleQuickAddPerson}
+                      className="px-3.5 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs disabled:opacity-40 flex items-center gap-1.5 shadow-xs cursor-pointer"
+                    >
+                      <Check className="w-3.5 h-3.5" />
+                      <span>
+                        {addingPersonLoading
+                          ? language === "es"
+                            ? "Guardando..."
+                            : "Saving..."
+                          : language === "es"
+                          ? "Guardar y Seleccionar"
+                          : "Save & Select"}
+                      </span>
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Schedule & Rate */}
@@ -492,9 +749,17 @@ export default function CreateCampaignModal({
                 <Sparkles className="w-4 h-4" />
                 <span>
                   {submitting
-                    ? language === "es"
+                    ? isEditMode
+                      ? language === "es"
+                        ? "Guardando Cambios..."
+                        : "Saving Changes..."
+                      : language === "es"
                       ? "Creando Campaña..."
                       : "Creating Campaign..."
+                    : isEditMode
+                    ? language === "es"
+                      ? "Guardar Cambios"
+                      : "Save Changes"
                     : language === "es"
                     ? "Crear Campaña"
                     : "Create Campaign"}
