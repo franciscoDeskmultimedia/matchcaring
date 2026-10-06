@@ -2,10 +2,14 @@
 
 import { useEffect, useState, use } from "react";
 import confetti from "canvas-confetti";
+import { motion, AnimatePresence } from "framer-motion";
+import { toast } from "sonner";
+
 import { CandidateProfile, CandidateResponse, CustomAnswer, CustomQuestion } from "@/lib/types";
 import { COUNTRIES, getCountryByCode, detectUserCountry } from "@/lib/countries";
 import { useLanguage } from "@/components/LanguageContext";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
+import BrandLogo from "@/components/BrandLogo";
 import {
   ArrowLeft,
   ArrowRight,
@@ -15,6 +19,7 @@ import {
   Globe2,
   HeartHandshake,
   HelpCircle,
+  Lock,
   Send,
   ShieldAlert,
   ShieldCheck,
@@ -190,13 +195,18 @@ export default function CandidateTestPage({
       if (!res.ok) throw new Error(data.error || "Failed to submit responses.");
 
       setCompleted(true);
+      toast.success(
+        language === "es"
+          ? "¡Evaluación completada con éxito!"
+          : "Assessment submitted successfully!"
+      );
       confetti({
-        particleCount: 100,
-        spread: 70,
+        particleCount: 120,
+        spread: 80,
         origin: { y: 0.6 },
       });
     } catch (err: any) {
-      alert(err.message || "An error occurred while submitting.");
+      toast.error(err.message || "An error occurred while submitting.");
     } finally {
       setSubmitting(false);
     }
@@ -232,36 +242,59 @@ export default function CandidateTestPage({
     );
   }
 
+  // Shared persistent navigation bar for all test steps
+  const renderHeaderBar = () => (
+    <header className="w-full bg-white/85 backdrop-blur-md border-b border-slate-200/80 sticky top-0 z-40 shadow-2xs">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <BrandLogo href="#" size="sm" />
+          <div className="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full bg-sky-50 border border-sky-200/70 text-[11px] font-bold text-sky-800">
+            <ShieldCheck className="w-3.5 h-3.5 text-sky-600" />
+            <span>{language === "es" ? "Portal Oficial de Evaluación" : "Official Candidate Evaluation"}</span>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3">
+          {(profile.fullName || candidateInfo?.name) && (
+            <span className="hidden md:inline-flex text-xs font-semibold text-slate-500 bg-slate-100/90 border border-slate-200/60 px-3 py-1 rounded-full">
+              {profile.fullName || candidateInfo?.name}
+            </span>
+          )}
+          <LanguageSwitcher />
+        </div>
+      </div>
+    </header>
+  );
+
   // Already Completed Screen
   if (completed) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-emerald-50/50 via-slate-50 to-sky-50/40 flex items-center justify-center p-4">
-        <div className="max-w-lg w-full bg-white rounded-2xl p-8 sm:p-10 border border-slate-200 text-center shadow-xl space-y-5 animate-in fade-in relative">
-          <div className="absolute top-4 right-4">
-            <LanguageSwitcher />
-          </div>
+      <div className="min-h-screen bg-gradient-to-br from-emerald-50/50 via-slate-50 to-sky-50/40 flex flex-col justify-between">
+        {renderHeaderBar()}
+        <div className="flex-1 flex items-center justify-center p-4">
+          <div className="max-w-lg w-full bg-white rounded-3xl p-8 sm:p-10 border border-slate-200 text-center shadow-xl space-y-5 animate-in fade-in">
+            <div className="w-16 h-16 rounded-3xl bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto shadow-inner">
+              <CheckCircle2 className="w-8 h-8" />
+            </div>
+            <div className="space-y-2">
+              <h1 className="text-2xl font-black text-slate-900 tracking-tight">
+                {t.submittedTitle}
+              </h1>
+              <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
+                {t.submittedDesc(profile.fullName || candidateInfo?.name || "")}
+              </p>
+            </div>
 
-          <div className="w-16 h-16 rounded-3xl bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto shadow-inner">
-            <CheckCircle2 className="w-8 h-8" />
-          </div>
-          <div className="space-y-2">
-            <h1 className="text-2xl font-black text-slate-900 tracking-tight">
-              {t.submittedTitle}
-            </h1>
-            <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
-              {t.submittedDesc(profile.fullName || candidateInfo?.name || "")}
+            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200/80 text-xs text-slate-600 text-left space-y-1.5">
+              <p className="font-bold text-slate-800">{t.whatHappensNext}</p>
+              <p>{t.nextStep1}</p>
+              <p>{t.nextStep2}</p>
+            </div>
+
+            <p className="text-[11px] text-slate-400 pt-2">
+              {t.closeWindow}
             </p>
           </div>
-
-          <div className="p-4 rounded-xl bg-slate-50 border border-slate-200/80 text-xs text-slate-600 text-left space-y-1.5">
-            <p className="font-bold text-slate-800">{t.whatHappensNext}</p>
-            <p>{t.nextStep1}</p>
-            <p>{t.nextStep2}</p>
-          </div>
-
-          <p className="text-[11px] text-slate-400 pt-2">
-            {t.closeWindow}
-          </p>
         </div>
       </div>
     );
@@ -270,15 +303,16 @@ export default function CandidateTestPage({
   // Welcome Step (Step 0)
   if (currentStep === 0) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-sky-50/50 via-slate-50 to-indigo-50/40 flex flex-col justify-center py-10 px-4 sm:px-6 relative">
-        <div className="max-w-xl w-full mx-auto bg-white rounded-2xl border border-slate-200/90 shadow-xl p-6 sm:p-10 space-y-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-sky-600 to-indigo-600 text-white flex items-center justify-center shadow-md shadow-sky-600/30">
+      <div className="min-h-screen bg-gradient-to-br from-sky-50/50 via-slate-50 to-indigo-50/40 flex flex-col justify-between">
+        {renderHeaderBar()}
+        <div className="flex-1 flex items-center justify-center py-8 px-4 sm:px-6 relative">
+          <div className="max-w-xl w-full mx-auto bg-white rounded-3xl border border-slate-200/90 shadow-xl p-6 sm:p-10 space-y-6">
+            <div className="flex items-center gap-3.5 pb-2 border-b border-slate-100">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-sky-600 to-indigo-600 text-white flex items-center justify-center shadow-md shadow-sky-600/30 shrink-0">
                 <HeartHandshake className="w-6 h-6" />
               </div>
               <div>
-                <span className="text-xs font-bold text-sky-600 uppercase tracking-wider">
+                <span className="text-[11px] font-bold text-sky-600 uppercase tracking-wider block">
                   {t.portalTag}
                 </span>
                 <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
@@ -287,48 +321,46 @@ export default function CandidateTestPage({
               </div>
             </div>
 
-            <LanguageSwitcher />
-          </div>
-
-          <div className="space-y-3 text-xs sm:text-sm text-slate-600 leading-relaxed">
-            <p>{t.welcomeP1}</p>
-            <div className="p-3.5 rounded-xl bg-sky-50 border border-sky-200/80 font-bold text-sky-950 flex items-center gap-2">
-              <Baby className="w-5 h-5 text-sky-600 shrink-0" />
-              <span>{candidateInfo?.roleTarget}</span>
-            </div>
-            <p>{t.welcomeP2}</p>
-          </div>
-
-          {/* Highlights */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 text-xs">
-            <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/70 text-center">
-              <Clock className="w-4 h-4 text-sky-600 mx-auto mb-1" />
-              <span className="font-bold text-slate-900 block">{t.highlight1Title}</span>
-              <span className="text-slate-500 text-[11px]">{t.highlight1Sub}</span>
+            <div className="space-y-3 text-xs sm:text-sm text-slate-600 leading-relaxed">
+              <p>{t.welcomeP1}</p>
+              <div className="p-3.5 rounded-xl bg-sky-50 border border-sky-200/80 font-bold text-sky-950 flex items-center gap-2">
+                <Baby className="w-5 h-5 text-sky-600 shrink-0" />
+                <span>{candidateInfo?.roleTarget}</span>
+              </div>
+              <p>{t.welcomeP2}</p>
             </div>
 
-            <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/70 text-center">
-              <Sparkles className="w-4 h-4 text-indigo-600 mx-auto mb-1" />
-              <span className="font-bold text-slate-900 block">{t.highlight2Title}</span>
-              <span className="text-slate-500 text-[11px]">{t.highlight2Sub}</span>
+            {/* Highlights */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 text-xs">
+              <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/70 text-center">
+                <Clock className="w-4 h-4 text-sky-600 mx-auto mb-1.5" />
+                <span className="font-bold text-slate-900 block">{t.highlight1Title}</span>
+                <span className="text-slate-500 text-[11px]">{t.highlight1Sub}</span>
+              </div>
+
+              <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/70 text-center">
+                <Sparkles className="w-4 h-4 text-indigo-600 mx-auto mb-1.5" />
+                <span className="font-bold text-slate-900 block">{t.highlight2Title}</span>
+                <span className="text-slate-500 text-[11px]">{t.highlight2Sub}</span>
+              </div>
+
+              <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/70 text-center">
+                <ShieldCheck className="w-4 h-4 text-emerald-600 mx-auto mb-1.5" />
+                <span className="font-bold text-slate-900 block">{t.highlight3Title}</span>
+                <span className="text-slate-500 text-[11px]">{t.highlight3Sub}</span>
+              </div>
             </div>
 
-            <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/70 text-center">
-              <ShieldCheck className="w-4 h-4 text-emerald-600 mx-auto mb-1" />
-              <span className="font-bold text-slate-900 block">{t.highlight3Title}</span>
-              <span className="text-slate-500 text-[11px]">{t.highlight3Sub}</span>
+            <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
+              <span className="text-xs text-slate-400">{t.readyWhenYouAre}</span>
+              <button
+                onClick={() => setCurrentStep(1)}
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-sky-600 hover:bg-sky-700 text-white font-bold text-sm shadow-md shadow-sky-600/25 transition-all active:scale-95"
+              >
+                <span>{t.beginAssessment}</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
             </div>
-          </div>
-
-          <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
-            <span className="text-xs text-slate-400">{t.readyWhenYouAre}</span>
-            <button
-              onClick={() => setCurrentStep(1)}
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-sky-600 hover:bg-sky-700 text-white font-bold text-sm shadow-md shadow-sky-600/25 transition-all active:scale-95"
-            >
-              <span>{t.beginAssessment}</span>
-              <ArrowRight className="w-4 h-4" />
-            </button>
           </div>
         </div>
       </div>
@@ -340,28 +372,36 @@ export default function CandidateTestPage({
     const handleNextFromProfile = (e: React.FormEvent) => {
       e.preventDefault();
       if (!profile.fullName || !profile.phone) {
-        alert(language === "es" ? "Por favor ingresa tu nombre y teléfono." : "Please provide your full name and phone number.");
+        toast.warning(
+          language === "es"
+            ? "Por favor ingresa tu nombre y teléfono celular para continuar."
+            : "Please provide your full name and phone number."
+        );
         return;
       }
       setCurrentStep(2);
     };
 
     return (
-      <div className="min-h-screen bg-slate-50 py-10 px-4 sm:px-6">
-        <div className="max-w-2xl w-full mx-auto bg-white rounded-2xl border border-slate-200/90 shadow-lg p-6 sm:p-8 space-y-6">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-            <div>
-              <span className="text-[11px] font-bold text-sky-600 uppercase tracking-wider">
+      <div className="min-h-screen bg-slate-50 flex flex-col justify-between">
+        {renderHeaderBar()}
+        <div className="flex-1 py-8 px-4 sm:px-6">
+          <div className="max-w-2xl w-full mx-auto bg-white rounded-3xl border border-slate-200/90 shadow-xl p-6 sm:p-8 space-y-6">
+            <div className="border-b border-slate-100 pb-4 space-y-1">
+              <span className="text-[11px] font-bold text-sky-600 uppercase tracking-wider block">
                 {t.stepProgress(1, questions.length + 1)}
               </span>
-              <h2 className="text-lg font-black text-slate-900">
+              <h2 className="text-xl font-black text-slate-900 tracking-tight">
                 {t.step1Header}
               </h2>
+              <p className="text-xs text-slate-500">
+                {language === "es"
+                  ? "Información requerida para validar tu perfil ante la familia evaluadora."
+                  : "Information required to verify your profile with the hiring family."}
+              </p>
             </div>
-            <LanguageSwitcher />
-          </div>
 
-          <form onSubmit={handleNextFromProfile} className="space-y-4">
+            <form onSubmit={handleNextFromProfile} className="space-y-4">
             {/* Full Name & Email */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
@@ -579,7 +619,8 @@ export default function CandidateTestPage({
                 <ArrowRight className="w-4 h-4" />
               </button>
             </div>
-          </form>
+            </form>
+          </div>
         </div>
       </div>
     );
@@ -593,24 +634,27 @@ export default function CandidateTestPage({
   ) {
     const customQuestionsList = candidateInfo.customQuestions;
     return (
-      <div className="min-h-screen bg-slate-50 flex flex-col justify-between py-8 px-4 sm:px-6">
-        <div className="max-w-2xl w-full mx-auto space-y-6">
+      <div className="min-h-screen bg-slate-50 flex flex-col justify-between">
+        {renderHeaderBar()}
+        <div className="flex-1 max-w-2xl w-full mx-auto px-4 sm:px-6 py-8 space-y-6">
           {/* Header */}
-          <div className="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-4 sm:p-5 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="w-8 h-8 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center">
-                <HelpCircle className="w-4 h-4" />
+          <div className="bg-white rounded-3xl border border-slate-200/90 shadow-sm p-5 sm:p-6 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <span className="w-10 h-10 rounded-2xl bg-purple-100 text-purple-700 flex items-center justify-center shrink-0">
+                <HelpCircle className="w-5 h-5" />
               </span>
               <div>
                 <span className="text-[11px] font-bold text-purple-600 uppercase tracking-wider block">
                   {language === "es" ? "Etapa Final" : "Final Stage"}
                 </span>
-                <h2 className="text-base font-black text-slate-900">
+                <h2 className="text-base sm:text-lg font-black text-slate-900">
                   {t.customQuestionsCandidateTitle}
                 </h2>
               </div>
             </div>
-            <LanguageSwitcher />
+            <span className="text-xs font-bold px-3 py-1 rounded-full bg-purple-50 text-purple-700 border border-purple-200">
+              {customQuestionsList.length} {language === "es" ? "Preguntas Familiares" : "Family Questions"}
+            </span>
           </div>
 
           {/* Custom Questions Card */}
@@ -750,7 +794,7 @@ export default function CandidateTestPage({
 
   const handleNextQuestion = () => {
     if (!selectedOptionId) {
-      alert(
+      toast.warning(
         language === "es"
           ? "Por favor selecciona una de las opciones antes de continuar."
           : "Please select one of the options before continuing."
@@ -770,93 +814,133 @@ export default function CandidateTestPage({
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col justify-between py-8 px-4 sm:px-6">
-      <div className="max-w-2xl w-full mx-auto space-y-6">
-        {/* Progress Bar & Header */}
-        <div className="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-4 sm:p-5 space-y-3">
-          <div className="flex items-center justify-between text-xs">
-            <span className="font-bold text-sky-600 uppercase tracking-wider">
-              {categoryTitle}
-            </span>
-            <div className="flex items-center gap-3">
-              <span className="font-semibold text-slate-400">
-                {t.questionProgress(questionIndex + 1, questions.length, progressPercent)}
+    <div className="min-h-screen bg-gradient-to-b from-sky-50/70 via-slate-50 to-indigo-50/50 flex flex-col justify-between relative overflow-hidden">
+      {/* Ambient background blur elements */}
+      <div className="absolute -top-32 -left-32 w-96 h-96 rounded-full bg-sky-400/10 blur-3xl pointer-events-none" />
+      <div className="absolute -bottom-32 -right-32 w-96 h-96 rounded-full bg-indigo-400/10 blur-3xl pointer-events-none" />
+
+      {renderHeaderBar()}
+
+      <div className="max-w-2xl w-full mx-auto px-4 sm:px-6 space-y-6 relative z-10 pb-12">
+        {/* Spacious, Elegant Progress Card */}
+        <div className="bg-white/95 backdrop-blur-md rounded-2xl sm:rounded-3xl border border-slate-200/90 shadow-sm p-5 sm:p-6 space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            {/* Category Pill */}
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-sky-50 border border-sky-200/80 text-sky-800 self-start">
+              <Sparkles className="w-4 h-4 text-sky-600 shrink-0" />
+              <span className="text-xs sm:text-sm font-extrabold tracking-wide uppercase">
+                {categoryTitle}
               </span>
-              <LanguageSwitcher />
+            </div>
+
+            {/* Question Counter Pill & Progress % */}
+            <div className="flex items-center gap-2 self-start sm:self-auto">
+              <span className="px-3 py-1 rounded-xl bg-slate-100 text-slate-700 font-bold text-xs">
+                {language === "es" ? "Pregunta" : "Question"} {questionIndex + 1} / {questions.length}
+              </span>
+              <span className="px-2.5 py-1 rounded-xl bg-sky-600 text-white font-black text-xs shadow-xs">
+                {progressPercent}%
+              </span>
             </div>
           </div>
 
-          <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
-            <div
-              className="h-full bg-sky-600 rounded-full transition-all duration-300"
-              style={{ width: `${progressPercent}%` }}
-            />
+          {/* Progress Bar Track */}
+          <div className="space-y-1.5">
+            <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden p-0.5 shadow-inner">
+              <motion.div
+                className="h-full bg-gradient-to-r from-sky-500 via-indigo-500 to-sky-600 rounded-full"
+                initial={false}
+                animate={{ width: `${progressPercent}%` }}
+                transition={{ type: "spring", stiffness: 90, damping: 18 }}
+              />
+            </div>
+            <div className="flex items-center justify-between text-[11px] text-slate-400 px-0.5">
+              <span>{t.questionProgress(questionIndex + 1, questions.length, progressPercent)}</span>
+              <span className="hidden sm:inline-flex items-center gap-1 text-slate-400">
+                <Lock className="w-3 h-3 text-emerald-600" />
+                <span>{language === "es" ? "Progreso guardado automáticamente" : "Responses auto-saved"}</span>
+              </span>
+            </div>
           </div>
         </div>
 
-        {/* Question Card */}
-        <div className="bg-white rounded-2xl border border-slate-200/90 shadow-lg p-6 sm:p-8 space-y-6 animate-in fade-in">
-          <div className="space-y-2">
-            <h2 className="text-base sm:text-lg font-black text-slate-900 leading-snug">
-              {questionText}
-            </h2>
-            {contextText && (
-              <p className="text-xs text-slate-500 italic">
-                {language === "es" ? "Contexto evaluado:" : "Context:"} {contextText}
-              </p>
-            )}
-          </div>
+        {/* Question Card with AnimatePresence */}
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={currentQuestion.id}
+            initial={{ opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -14 }}
+            transition={{ duration: 0.22, ease: "easeOut" }}
+            className="bg-white rounded-3xl border border-slate-200/90 shadow-xl shadow-slate-200/50 p-6 sm:p-8 space-y-6 relative overflow-hidden"
+          >
+            <div className="space-y-2.5">
+              <div className="flex items-center gap-2 text-[11px] font-bold text-slate-400 uppercase tracking-widest">
+                <span>{language === "es" ? "Pregunta" : "Question"} {questionIndex + 1} / {questions.length}</span>
+              </div>
+              <h2 className="text-base sm:text-lg font-black text-slate-900 leading-snug">
+                {questionText}
+              </h2>
+              {contextText && (
+                <div className="p-3 rounded-xl bg-slate-50/80 border border-slate-100 text-xs text-slate-500 italic flex items-center gap-2">
+                  <span className="text-sky-500 font-bold not-italic">💡</span>
+                  <span>{language === "es" ? "Contexto evaluado:" : "Context:"} {contextText}</span>
+                </div>
+              )}
+            </div>
 
-          {/* Options */}
-          <div className="space-y-3">
-            {currentQuestion.options.map((opt, idx) => {
-              const isSelected = selectedOptionId === opt.id;
-              const optionLetter = String.fromCharCode(65 + idx);
-              const optText = (language === "es" && opt.textEs) ? opt.textEs : opt.text;
+            {/* Options */}
+            <div className="space-y-3">
+              {currentQuestion.options.map((opt, idx) => {
+                const isSelected = selectedOptionId === opt.id;
+                const optionLetter = String.fromCharCode(65 + idx);
+                const optText = (language === "es" && opt.textEs) ? opt.textEs : opt.text;
 
-              return (
-                <button
-                  key={opt.id}
-                  type="button"
-                  onClick={() => handleSelectOption(currentQuestion.id, opt.id)}
-                  className={`w-full text-left p-4 sm:p-4.5 rounded-xl border transition-all flex items-start gap-3.5 group cursor-pointer ${
-                    isSelected
-                      ? "bg-sky-50/80 border-sky-500 ring-2 ring-sky-500/20 shadow-sm"
-                      : "bg-white border-slate-200/80 hover:border-slate-300 hover:bg-slate-50/50"
-                  }`}
-                >
-                  <div
-                    className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold shrink-0 transition-colors ${
+                return (
+                  <motion.button
+                    key={opt.id}
+                    type="button"
+                    whileHover={{ scale: 1.008, y: -1 }}
+                    whileTap={{ scale: 0.992 }}
+                    onClick={() => handleSelectOption(currentQuestion.id, opt.id)}
+                    className={`w-full text-left p-4 sm:p-4.5 rounded-2xl border transition-all flex items-start gap-3.5 group cursor-pointer ${
                       isSelected
-                        ? "bg-sky-600 text-white"
-                        : "bg-slate-100 text-slate-600 group-hover:bg-slate-200"
+                        ? "bg-gradient-to-r from-sky-50/90 to-indigo-50/70 border-sky-500 ring-2 ring-sky-500/25 shadow-md shadow-sky-500/10"
+                        : "bg-white border-slate-200/80 hover:border-sky-300 hover:bg-slate-50/60 shadow-xs"
                     }`}
                   >
-                    {isSelected ? <CheckCircle2 className="w-4 h-4" /> : optionLetter}
-                  </div>
+                    <div
+                      className={`w-7 h-7 rounded-xl flex items-center justify-center text-xs font-black shrink-0 transition-all ${
+                        isSelected
+                          ? "bg-sky-600 text-white shadow-sm shadow-sky-600/30 scale-105"
+                          : "bg-slate-100 text-slate-600 group-hover:bg-slate-200"
+                      }`}
+                    >
+                      {isSelected ? <CheckCircle2 className="w-4 h-4 stroke-[2.5]" /> : optionLetter}
+                    </div>
 
-                  <span
-                    className={`text-xs sm:text-sm leading-relaxed ${
-                      isSelected ? "text-sky-950 font-semibold" : "text-slate-700"
-                    }`}
-                  >
-                    {optText}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
+                    <span
+                      className={`text-xs sm:text-sm leading-relaxed ${
+                        isSelected ? "text-slate-950 font-bold" : "text-slate-700 font-medium"
+                      }`}
+                    >
+                      {optText}
+                    </span>
+                  </motion.button>
+                );
+              })}
+            </div>
 
-          {/* Navigation Controls */}
-          <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
-            <button
-              type="button"
-              onClick={() => setCurrentStep(currentStep - 1)}
-              className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-900 transition-colors"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              <span>{t.previous}</span>
-            </button>
+            {/* Navigation Controls */}
+            <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
+              <button
+                type="button"
+                onClick={() => setCurrentStep(currentStep - 1)}
+                className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-bold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                <span>{t.previous}</span>
+              </button>
 
             <button
               type="button"
@@ -884,8 +968,9 @@ export default function CandidateTestPage({
               )}
             </button>
           </div>
-        </div>
-      </div>
+        </motion.div>
+      </AnimatePresence>
+    </div>
 
       {/* Footer reassurance */}
       <footer className="max-w-2xl w-full mx-auto text-center pt-6 text-[11px] text-slate-400">

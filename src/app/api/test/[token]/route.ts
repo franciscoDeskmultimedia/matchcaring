@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCandidateByToken, saveCandidateSubmission } from "@/lib/db";
 import { ASSESSMENT_QUESTIONS } from "@/lib/questions";
+import { getQuestionsForSelectedBatteries } from "@/lib/psychometricBatteries";
 
 // Deterministic seeded PRNG (Mulberry32) to shuffle options predictably per candidate test
 function seededShuffle<T>(array: T[], seedStr: string): T[] {
@@ -44,7 +45,12 @@ export async function GET(
       roleLower.includes("siblings")
     ));
 
-  const relevantQuestions = ASSESSMENT_QUESTIONS.filter((q) => {
+  const allBatteryQuestions = getQuestionsForSelectedBatteries(
+    candidate.selectedBatteryIds,
+    ASSESSMENT_QUESTIONS
+  );
+
+  const relevantQuestions = allBatteryQuestions.filter((q) => {
     if (q.category === "sibling_and_multichild") {
       return isMultiChild;
     }

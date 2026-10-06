@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import { CareCategory, Child, CustomQuestion, ParentCampaign } from "@/lib/types";
 import { useLanguage } from "./LanguageContext";
 import QuestionBankModal from "./QuestionBankModal";
+import PsychometricBatterySelector from "./PsychometricBatterySelector";
+import { getRecommendedBatteriesForRecipient } from "@/lib/psychometricBatteries";
 import {
   Activity,
   Baby,
@@ -59,6 +61,11 @@ export default function CreateCampaignModal({
   );
   const [notes, setNotes] = useState("");
   const [customQuestions, setCustomQuestions] = useState<CustomQuestion[]>([]);
+  const [selectedBatteryIds, setSelectedBatteryIds] = useState<string[]>([
+    "sjt_base",
+    "buss_perry",
+    "marlowe_crowne",
+  ]);
   const [isQuestionBankOpen, setIsQuestionBankOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
@@ -91,15 +98,31 @@ export default function CreateCampaignModal({
       );
       setNotes(campaignToEdit.notes || "");
       setCustomQuestions(campaignToEdit.customQuestions || []);
+      if (campaignToEdit.selectedBatteryIds && campaignToEdit.selectedBatteryIds.length > 0) {
+        setSelectedBatteryIds(campaignToEdit.selectedBatteryIds);
+      } else {
+        const firstKid = campaignToEdit.targetChildren?.[0];
+        setSelectedBatteryIds(
+          getRecommendedBatteriesForRecipient(
+            firstKid?.age,
+            campaignToEdit.careCategory || "childcare"
+          )
+        );
+      }
     } else {
       setTitle("");
       setCareCategory("childcare");
-      setSelectedChildIds(childrenList.map((c) => c.id));
+      const initialKidIds = childrenList.map((c) => c.id);
+      setSelectedChildIds(initialKidIds);
       setScheduleType("full_time");
       setExpectedHourlyRate("");
       setStartDate(language === "es" ? "Inmediato" : "Immediate");
       setNotes("");
       setCustomQuestions([]);
+      const firstKid = childrenList[0];
+      setSelectedBatteryIds(
+        getRecommendedBatteriesForRecipient(firstKid?.age, "childcare")
+      );
     }
     setErrorMsg("");
     setIsAddingPerson(false);
@@ -108,13 +131,18 @@ export default function CreateCampaignModal({
   if (!isOpen) return null;
 
   const toggleChild = (id: string) => {
-    setSelectedChildIds((prev) =>
-      prev.includes(id)
-        ? prev.length > 1
-          ? prev.filter((cId) => cId !== id)
-          : prev
-        : [...prev, id]
-    );
+    const nextIds = selectedChildIds.includes(id)
+      ? selectedChildIds.length > 1
+        ? selectedChildIds.filter((cId) => cId !== id)
+        : selectedChildIds
+      : [...selectedChildIds, id];
+    setSelectedChildIds(nextIds);
+    const activeKid = localChildren.find((c) => nextIds.includes(c.id));
+    if (activeKid) {
+      setSelectedBatteryIds(
+        getRecommendedBatteriesForRecipient(activeKid.age, careCategory)
+      );
+    }
   };
 
   const handleQuickAddPerson = async (e: React.FormEvent) => {
@@ -198,6 +226,7 @@ export default function CreateCampaignModal({
         startDate: startDate.trim(),
         notes: notes.trim(),
         customQuestions,
+        selectedBatteryIds,
         active: true,
       };
 
@@ -654,6 +683,22 @@ export default function CreateCampaignModal({
                 />
               </div>
             </div>
+
+            {/* Standardized Psychometric & Clinical Batteries Selection */}
+            <PsychometricBatterySelector
+              selectedBatteryIds={selectedBatteryIds}
+              onChange={setSelectedBatteryIds}
+              targetAge={
+                localChildren.find((c) => selectedChildIds.includes(c.id))?.age
+              }
+              careCategory={careCategory}
+              recipientLabel={
+                localChildren
+                  .filter((c) => selectedChildIds.includes(c.id))
+                  .map((c) => `${c.name} (${c.age} ${language === "es" ? "años" : "yo"})`)
+                  .join(", ")
+              }
+            />
 
             {/* Custom Questions Section with Question Bank Picker */}
             <div className="space-y-3 p-4 rounded-2xl bg-slate-50 border border-slate-200">

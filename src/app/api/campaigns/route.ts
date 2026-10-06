@@ -34,6 +34,7 @@ export async function POST(req: NextRequest) {
       startDate,
       notes,
       customQuestions,
+      selectedBatteryIds,
       active,
     } = body;
 
@@ -53,6 +54,7 @@ export async function POST(req: NextRequest) {
       startDate: startDate?.trim(),
       notes: notes?.trim(),
       customQuestions: customQuestions || [],
+      selectedBatteryIds: Array.isArray(selectedBatteryIds) ? selectedBatteryIds : undefined,
       active: active !== undefined ? Boolean(active) : true,
     });
 
@@ -84,6 +86,7 @@ export async function PUT(req: NextRequest) {
       startDate,
       notes,
       customQuestions,
+      selectedBatteryIds,
       active,
     } = body;
 
@@ -110,6 +113,7 @@ export async function PUT(req: NextRequest) {
       startDate: startDate !== undefined ? startDate.trim() : undefined,
       notes: notes !== undefined ? notes.trim() : undefined,
       customQuestions,
+      selectedBatteryIds: Array.isArray(selectedBatteryIds) ? selectedBatteryIds : undefined,
       active: active !== undefined ? Boolean(active) : undefined,
     });
 

@@ -6,6 +6,10 @@ import {
   RedFlagAlert,
 } from "./types";
 import { ASSESSMENT_QUESTIONS } from "./questions";
+import {
+  calculatePsychometricReport,
+  getQuestionsForSelectedBatteries,
+} from "./psychometricBatteries";
 
 const CATEGORY_META: Record<
   QuestionCategory,
@@ -43,7 +47,10 @@ const CATEGORY_META: Record<
   },
 };
 
-export function evaluateAssessment(responses: CandidateResponse[]): AssessmentResult {
+export function evaluateAssessment(
+  responses: CandidateResponse[],
+  selectedBatteryIds?: string[]
+): AssessmentResult {
   const responseMap = new Map<string, string>();
   responses.forEach((r) => responseMap.set(r.questionId, r.selectedOptionId));
 
@@ -72,7 +79,12 @@ export function evaluateAssessment(responses: CandidateResponse[]): AssessmentRe
     insightEs: string;
   }[] = [];
 
-  for (const q of ASSESSMENT_QUESTIONS) {
+  const allQuestionsToScore = getQuestionsForSelectedBatteries(
+    selectedBatteryIds,
+    ASSESSMENT_QUESTIONS
+  );
+
+  for (const q of allQuestionsToScore) {
     const selectedOptionId = responseMap.get(q.id);
     const maxOptionScore = Math.max(...q.options.map((o) => o.score));
     const selectedOption = q.options.find((o) => o.id === selectedOptionId);
@@ -317,6 +329,11 @@ export function evaluateAssessment(responses: CandidateResponse[]): AssessmentRe
     summaryEs = `ADVERTENCIA CRÍTICA: La candidata obtuvo ${overallScore}/100 y activó ${criticalFlagsCount} bandera(s) roja(s) crítica(s). Sus respuestas reflejan criterios de disciplina o seguridad que representan riesgos para un niño de 3 años. No se recomienda sin verificación exhaustiva.`;
   }
 
+  const psychometricReport = calculatePsychometricReport(
+    responses,
+    selectedBatteryIds && selectedBatteryIds.length > 0 ? selectedBatteryIds : ["sjt_base"]
+  );
+
   return {
     overallScore,
     tier,
@@ -326,6 +343,7 @@ export function evaluateAssessment(responses: CandidateResponse[]): AssessmentRe
     categoryScores,
     redFlags,
     generatedInterviewQuestions,
+    psychometricReport,
     completedAt: new Date().toISOString(),
   };
 }

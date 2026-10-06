@@ -125,6 +125,18 @@ export default function Navbar({
                   </span>
                 )}
               </Link>
+
+              <Link
+                href="/dashboard/questions"
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+                  pathname === "/dashboard/questions"
+                    ? "bg-indigo-50 text-indigo-900 font-black border border-indigo-200/80 shadow-2xs"
+                    : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+                }`}
+              >
+                <Layers className="w-3.5 h-3.5 text-indigo-600" />
+                <span>{language === "es" ? "Banco de Preguntas & Tests" : "Question Bank & Tests"}</span>
+              </Link>
             </nav>
           )}
         </div>
@@ -259,36 +271,18 @@ export default function Navbar({
                         </span>
                       </Link>
 
-                      {onOpenQuestionBank ? (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setIsDropdownOpen(false);
-                            onOpenQuestionBank();
-                          }}
-                          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-colors cursor-pointer text-left"
-                        >
-                          <Layers className="w-4 h-4 text-indigo-600" />
-                          <span>
-                            {language === "es"
-                              ? "Banco de Preguntas"
-                              : "Question Bank"}
-                          </span>
-                        </button>
-                      ) : (
-                        <Link
-                          href="/dashboard/new"
-                          onClick={() => setIsDropdownOpen(false)}
-                          className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-colors"
-                        >
-                          <Layers className="w-4 h-4 text-indigo-600" />
-                          <span>
-                            {language === "es"
-                              ? "Banco de Preguntas"
-                              : "Question Bank"}
-                          </span>
-                        </Link>
-                      )}
+                      <Link
+                        href="/dashboard/questions"
+                        onClick={() => setIsDropdownOpen(false)}
+                        className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-colors"
+                      >
+                        <Layers className="w-4 h-4 text-indigo-600" />
+                        <span>
+                          {language === "es"
+                            ? "Banco de Preguntas & Tests"
+                            : "Question Bank & Tests"}
+                        </span>
+                      </Link>
 
                       <Link
                         href="/dashboard/family"

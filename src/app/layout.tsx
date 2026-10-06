@@ -24,6 +24,8 @@ export const metadata: Metadata = {
   },
 };
 
+import { Toaster } from "sonner";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -32,7 +34,10 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${inter.variable} ${plusJakarta.variable}`}>
       <body className="min-h-screen font-sans bg-slate-50 text-slate-900 antialiased selection:bg-sky-500 selection:text-white">
-        <LanguageProvider>{children}</LanguageProvider>
+        <LanguageProvider>
+          {children}
+          <Toaster richColors position="top-right" closeButton />
+        </LanguageProvider>
       </body>
     </html>
   );

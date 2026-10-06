@@ -464,6 +464,7 @@ export async function createCandidate(data: {
   email?: string;
   parentNotes?: string;
   customQuestions?: CustomQuestion[];
+  selectedBatteryIds?: string[];
 }): Promise<Candidate> {
   if (isPostgresActive()) return pgCreateCandidate(data);
   const db = loadDatabase();
@@ -484,6 +485,7 @@ export async function createCandidate(data: {
     updatedAt: new Date().toISOString(),
     parentNotes: data.parentNotes,
     customQuestions: data.customQuestions || [],
+    selectedBatteryIds: data.selectedBatteryIds || [],
   };
   db.candidates.unshift(newCandidate);
   saveDatabase(db);
@@ -532,7 +534,8 @@ export async function saveCandidateSubmission(
   const index = db.candidates.findIndex((c) => c.token === token);
   if (index === -1) return undefined;
 
-  const result = evaluateAssessment(responses);
+  const candidateRecord = db.candidates[index];
+  const result = evaluateAssessment(responses, candidateRecord.selectedBatteryIds);
 
   db.candidates[index] = {
     ...db.candidates[index],

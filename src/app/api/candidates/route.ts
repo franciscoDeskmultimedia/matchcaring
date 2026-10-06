@@ -29,6 +29,7 @@ export async function POST(req: NextRequest) {
       email,
       parentNotes,
       customQuestions,
+      selectedBatteryIds,
     } = await req.json();
 
     if (!name?.trim()) {
@@ -52,6 +53,7 @@ export async function POST(req: NextRequest) {
       email: email?.trim(),
       parentNotes: parentNotes?.trim(),
       customQuestions: Array.isArray(customQuestions) ? customQuestions : [],
+      selectedBatteryIds: Array.isArray(selectedBatteryIds) ? selectedBatteryIds : undefined,
     });
 
     return NextResponse.json({ candidate });

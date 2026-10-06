@@ -118,6 +118,7 @@ export async function ensurePostgresSchema(): Promise<void> {
       CREATE INDEX IF NOT EXISTS idx_candidates_token ON candidates(token);
       ALTER TABLE candidates ADD COLUMN IF NOT EXISTS campaign_id VARCHAR(64);
       ALTER TABLE candidates ADD COLUMN IF NOT EXISTS ask_hourly_rate BOOLEAN DEFAULT true;
+      ALTER TABLE candidates ADD COLUMN IF NOT EXISTS selected_battery_ids JSONB;
       CREATE INDEX IF NOT EXISTS idx_candidates_campaign ON candidates(campaign_id);
 
       CREATE TABLE IF NOT EXISTS parent_campaigns (
@@ -141,6 +142,7 @@ export async function ensurePostgresSchema(): Promise<void> {
       ALTER TABLE parent_campaigns ADD COLUMN IF NOT EXISTS shared_with_emails JSONB DEFAULT '[]'::jsonb;
       ALTER TABLE parent_campaigns ADD COLUMN IF NOT EXISTS shared_with_user_ids JSONB DEFAULT '[]'::jsonb;
       ALTER TABLE parent_campaigns ADD COLUMN IF NOT EXISTS custom_questions JSONB DEFAULT '[]'::jsonb;
+      ALTER TABLE parent_campaigns ADD COLUMN IF NOT EXISTS selected_battery_ids JSONB;
 
       CREATE TABLE IF NOT EXISTS ad_campaigns (
           id VARCHAR(64) PRIMARY KEY,
@@ -392,6 +394,7 @@ function mapCandidateRow(row: any): Candidate {
     responses: typeof row.responses === "string" ? JSON.parse(row.responses) : row.responses || undefined,
     result: typeof row.result === "string" ? JSON.parse(row.result) : row.result || undefined,
     parentNotes: row.parent_notes || undefined,
+    selectedBatteryIds: typeof row.selected_battery_ids === "string" ? JSON.parse(row.selected_battery_ids) : row.selected_battery_ids || undefined,
     inTalentPool: row.in_talent_pool || false,
     talentPoolStatus: row.talent_pool_status || "review",
     createdAt: row.created_at ? new Date(row.created_at).toISOString() : new Date().toISOString(),
@@ -442,6 +445,7 @@ export async function pgCreateCandidate(data: {
   parentCustomQuestions?: any[];
   customQuestions?: any[];
   askHourlyRate?: boolean;
+  selectedBatteryIds?: string[];
 }): Promise<Candidate> {
   await ensurePostgresSchema();
   const pool = getPostgresPool();
@@ -453,8 +457,8 @@ export async function pgCreateCandidate(data: {
   const res = await pool.query(
     `INSERT INTO candidates (
        id, user_id, campaign_id, token, name, role_target, phone, email, status,
-       ask_hourly_rate, target_children, parent_custom_questions, parent_notes, created_at, updated_at
-     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'invited', $9, $10, $11, $12, $13, $13)
+       ask_hourly_rate, target_children, parent_custom_questions, parent_notes, selected_battery_ids, created_at, updated_at
+     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'invited', $9, $10, $11, $12, $13, $14, $14)
      RETURNING *`,
     [
       id,
@@ -469,6 +473,7 @@ export async function pgCreateCandidate(data: {
       JSON.stringify(data.targetChildren || null),
       JSON.stringify(customQuestionsPayload),
       data.parentNotes || null,
+      JSON.stringify(data.selectedBatteryIds || []),
       now,
     ]
   );
@@ -524,7 +529,7 @@ export async function pgSaveCandidateSubmission(
   const candidate = await pgGetCandidateByToken(token);
   if (!candidate) return undefined;
 
-  const result = evaluateAssessment(responses);
+  const result = evaluateAssessment(responses, candidate.selectedBatteryIds);
   const now = new Date().toISOString();
 
   const res = await pool.query(
@@ -1103,6 +1108,7 @@ function mapCampaignRow(row: any): ParentCampaign {
     startDate: row.start_date || undefined,
     notes: row.notes || undefined,
     customQuestions: typeof row.custom_questions === "string" ? JSON.parse(row.custom_questions) : row.custom_questions || [],
+    selectedBatteryIds: typeof row.selected_battery_ids === "string" ? JSON.parse(row.selected_battery_ids) : row.selected_battery_ids || undefined,
     active: row.active !== false,
     publicToken: row.public_token || undefined,
     shareCode: row.share_code || undefined,
@@ -1162,9 +1168,9 @@ export async function pgCreateParentCampaign(
   const res = await pool.query(
     `INSERT INTO parent_campaigns (
        id, user_id, title, care_category, target_children, schedule_type,
-       expected_hourly_rate, start_date, notes, custom_questions, active, public_token, share_code,
+       expected_hourly_rate, start_date, notes, custom_questions, selected_battery_ids, active, public_token, share_code,
        shared_with_emails, shared_with_user_ids, created_at
-     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,NOW())
+     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,NOW())
      RETURNING *`,
     [
       id,
@@ -1177,6 +1183,7 @@ export async function pgCreateParentCampaign(
       data.startDate || "Inmediata",
       data.notes || null,
       JSON.stringify(data.customQuestions || []),
+      JSON.stringify(data.selectedBatteryIds || []),
       data.active !== false,
       publicToken,
       data.shareCode || shareCode,

@@ -13,6 +13,8 @@ import QuestionBankModal from "@/components/QuestionBankModal";
 import ShareCampaignModal from "@/components/ShareCampaignModal";
 import { Candidate, CareCategory, Child, ParentCampaign, User } from "@/lib/types";
 import { useLanguage } from "@/components/LanguageContext";
+import { toast } from "sonner";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   AlertOctagon,
   ArrowLeft,
@@ -39,6 +41,7 @@ import {
   Users2,
   X,
 } from "lucide-react";
+
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -154,6 +157,7 @@ export default function DashboardPage() {
       const res = await fetch(`/api/campaigns?id=${id}`, { method: "DELETE" });
       if (res.ok) {
         setCampaigns((prev) => prev.filter((c) => c.id !== id));
+        toast.success(language === "es" ? "Campaña eliminada exitosamente" : "Campaign deleted successfully");
         if (selectedCampaignId === id) {
           setSelectedCampaignId(null);
           router.push("/dashboard");
@@ -161,6 +165,7 @@ export default function DashboardPage() {
       }
     } catch (err) {
       console.error("Delete campaign error:", err);
+      toast.error(language === "es" ? "Error al eliminar la campaña" : "Error deleting campaign");
     }
   };
 
@@ -170,6 +175,7 @@ export default function DashboardPage() {
     const link = `${origin}/dashboard?joinCode=${encodeURIComponent(code)}`;
     navigator.clipboard.writeText(link);
     setCopiedCampaignId(campaign.id);
+    toast.success(language === "es" ? "Enlace de colaboración copiado al portapapeles" : "Collaboration link copied to clipboard");
     setTimeout(() => setCopiedCampaignId(null), 2000);
   };
 
@@ -189,18 +195,18 @@ export default function DashboardPage() {
       });
       const data = await res.json();
       if (!res.ok) {
-        setJoinError(
-          data.error ||
-            (language === "es"
-              ? "Código inválido o no se encontró la campaña."
-              : "Invalid code or campaign not found.")
-        );
+        const errMsg = data.error ||
+          (language === "es"
+            ? "Código inválido o no se encontró la campaña."
+            : "Invalid code or campaign not found.");
+        setJoinError(errMsg);
+        toast.error(errMsg);
       } else {
-        setJoinSuccess(
-          language === "es"
-            ? `¡Te has unido exitosamente a "${data.campaign.title}"!`
-            : `Successfully joined "${data.campaign.title}"!`
-        );
+        const succMsg = language === "es"
+          ? `¡Te has unido exitosamente a "${data.campaign.title}"!`
+          : `Successfully joined "${data.campaign.title}"!`;
+        setJoinSuccess(succMsg);
+        toast.success(succMsg);
         setCampaigns((prev) => {
           const exists = prev.find((c) => c.id === data.campaign.id);
           if (exists) {
@@ -225,7 +231,9 @@ export default function DashboardPage() {
         }, 1600);
       }
     } catch (err: any) {
-      setJoinError(err.message || "Network error");
+      const msg = err.message || "Network error";
+      setJoinError(msg);
+      toast.error(msg);
     } finally {
       setIsJoining(false);
     }
@@ -238,9 +246,11 @@ export default function DashboardPage() {
       const res = await fetch(`/api/candidates/${id}`, { method: "DELETE" });
       if (res.ok) {
         setCandidates((prev) => prev.filter((c) => c.id !== id));
+        toast.success(language === "es" ? "Candidata eliminada" : "Candidate deleted");
       }
     } catch (err) {
       console.error("Delete candidate error:", err);
+      toast.error(language === "es" ? "Error al eliminar candidata" : "Error deleting candidate");
     }
   };
 
@@ -263,9 +273,11 @@ export default function DashboardPage() {
         setChildrenList((prev) => [...prev, data.child]);
         setNewChildName("");
         setNewChildNotes("");
+        toast.success(language === "es" ? "Familiar registrado exitosamente" : "Family member added successfully");
       }
     } catch (e) {
       console.error(e);
+      toast.error(language === "es" ? "Error al registrar familiar" : "Error adding family member");
     } finally {
       setAddingChild(false);
     }
@@ -273,7 +285,7 @@ export default function DashboardPage() {
 
   const handleDeleteChild = async (id: string) => {
     if (childrenList.length <= 1) {
-      alert(
+      toast.warning(
         language === "es"
           ? "Debes mantener al menos una persona registrada."
           : "You must keep at least one registered recipient."
@@ -284,9 +296,11 @@ export default function DashboardPage() {
       const res = await fetch(`/api/children?id=${id}`, { method: "DELETE" });
       if (res.ok) {
         setChildrenList((prev) => prev.filter((c) => c.id !== id));
+        toast.success(language === "es" ? "Registro eliminado" : "Recipient deleted");
       }
     } catch (e) {
       console.error(e);
+      toast.error(language === "es" ? "Error al eliminar registro" : "Error deleting recipient");
     }
   };
 
@@ -294,22 +308,20 @@ export default function DashboardPage() {
     const origin = typeof window !== "undefined" ? window.location.origin : "";
     navigator.clipboard.writeText(`${origin}/test/${token}`);
     setCopiedId(id);
+    toast.success(language === "es" ? "Enlace de evaluación copiado al portapapeles" : "Assessment link copied to clipboard");
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  // Helper to extract candidates belonging to a campaign
+
+  // Helper to extract candidates belonging strictly to a campaign (exclusive isolation)
   const getCampaignCandidates = (camp: ParentCampaign) => {
     return candidates.filter((c) => {
-      if (c.campaignId && c.campaignId === camp.id) return true;
-      const matchesChildren = camp.targetChildren?.some((k) =>
-        c.targetChildren?.some((tc) => tc.id === k.id) ||
-        (!c.targetChildren && c.roleTarget.toLowerCase().includes(k.name.toLowerCase()))
-      );
-      if (matchesChildren) return true;
-      if (camp.title && c.roleTarget.toLowerCase().includes(camp.title.toLowerCase())) {
-        return true;
+      // 1. Strict exclusivity: candidate MUST belong to this specific campaign
+      if (c.campaignId) {
+        return c.campaignId === camp.id;
       }
-      return false;
+      // 2. Safe fallback only if the user has exactly 1 single campaign
+      return campaigns.length === 1;
     });
   };
 
@@ -421,12 +433,19 @@ export default function DashboardPage() {
         {!selectedCampaignId || !activeCampaign ? (
           <div className="space-y-8 animate-in fade-in">
             {/* Header / Intro Banner */}
-            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-sky-950 via-indigo-950 to-slate-950 text-white p-6 sm:p-8 shadow-xl border border-white/10">
-              <div className="absolute right-0 top-0 -mt-12 -mr-12 w-64 h-64 rounded-full bg-sky-500/10 blur-3xl pointer-events-none" />
+            <motion.div
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+              className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-sky-950 via-indigo-950 to-slate-950 text-white p-6 sm:p-8 shadow-xl border border-white/10"
+            >
+              <div className="absolute right-0 top-0 -mt-12 -mr-12 w-80 h-80 rounded-full bg-sky-500/15 blur-3xl pointer-events-none" />
+              <div className="absolute left-1/3 bottom-0 -mb-12 w-64 h-64 rounded-full bg-indigo-500/10 blur-3xl pointer-events-none" />
+
               <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
                 <div className="space-y-3">
                   <div className="flex flex-wrap items-center gap-2">
-                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-sky-400/20 text-sky-200 text-xs font-semibold border border-sky-400/30">
+                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-sky-400/20 text-sky-200 text-xs font-semibold border border-sky-400/30 backdrop-blur-xs">
                       <Sparkles className="w-3.5 h-3.5 text-sky-300" />
                       <span>
                         {language === "es"
@@ -437,7 +456,7 @@ export default function DashboardPage() {
 
                     <Link
                       href="/dashboard/family"
-                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-400/20 hover:bg-amber-400/30 text-amber-200 text-xs font-semibold border border-amber-400/30 transition-colors"
+                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-400/20 hover:bg-amber-400/30 text-amber-200 text-xs font-semibold border border-amber-400/30 transition-colors backdrop-blur-xs"
                       title={
                         language === "es"
                           ? "Administrar familiares y personas a cuidar"
@@ -478,26 +497,30 @@ export default function DashboardPage() {
 
                 {/* Header Action Buttons */}
                 <div className="flex flex-wrap items-center gap-2.5">
-                  <button
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.97 }}
                     onClick={() => {
                       setEditingCampaign(null);
                       setIsCreateCampaignOpen(true);
                     }}
-                    className="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-gradient-to-r from-sky-500 to-indigo-500 hover:from-sky-400 hover:to-indigo-400 text-white font-black text-xs sm:text-sm shadow-xl shadow-sky-500/25 transition-all active:scale-95 shrink-0 cursor-pointer"
+                    className="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-gradient-to-r from-sky-500 to-indigo-500 hover:from-sky-400 hover:to-indigo-400 text-white font-black text-xs sm:text-sm shadow-xl shadow-sky-500/25 transition-all cursor-pointer"
                   >
                     <Plus className="w-4 h-4 stroke-[3]" />
                     <span>
                       {language === "es" ? "+ Nueva Campaña" : "+ New Campaign"}
                     </span>
-                  </button>
+                  </motion.button>
 
-                  <button
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.97 }}
                     onClick={() => {
                       setJoinError("");
                       setJoinSuccess("");
                       setIsJoinModalOpen(true);
                     }}
-                    className="inline-flex items-center gap-1.5 px-4 py-3 rounded-2xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs sm:text-sm border border-white/20 backdrop-blur-md transition-all active:scale-95 shrink-0 cursor-pointer"
+                    className="inline-flex items-center gap-1.5 px-4 py-3 rounded-2xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs sm:text-sm border border-white/20 backdrop-blur-md transition-all cursor-pointer"
                   >
                     <Users className="w-3.5 h-3.5 text-sky-300" />
                     <span>
@@ -505,26 +528,28 @@ export default function DashboardPage() {
                         ? "Unirse con Código"
                         : "Join with Code"}
                     </span>
-                  </button>
+                  </motion.button>
 
-                  <button
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.97 }}
                     onClick={() => setIsQuestionBankOpen(true)}
-                    className="inline-flex items-center gap-1.5 px-4 py-3 rounded-2xl bg-slate-800/80 hover:bg-slate-700/80 text-white font-bold text-xs sm:text-sm border border-slate-700/80 transition-all active:scale-95 shrink-0 cursor-pointer"
+                    className="inline-flex items-center gap-1.5 px-4 py-3 rounded-2xl bg-slate-800/80 hover:bg-slate-700/80 text-white font-bold text-xs sm:text-sm border border-slate-700/80 transition-all cursor-pointer"
                   >
                     <Layers className="w-3.5 h-3.5 text-indigo-400" />
                     <span className="hidden sm:inline">
                       {language === "es" ? "Banco de Preguntas" : "Question Bank"}
                     </span>
-                  </button>
+                  </motion.button>
                 </div>
               </div>
-            </div>
+            </motion.div>
 
             {/* Campaign Grid Section */}
             <div className="bg-white rounded-3xl border border-slate-200/90 shadow-sm p-6 sm:p-7 space-y-6">
               <div className="flex items-center justify-between pb-4 border-b border-slate-100">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-2xl bg-sky-100 text-sky-700 flex items-center justify-center font-black">
+                  <div className="w-10 h-10 rounded-2xl bg-sky-100 text-sky-700 flex items-center justify-center font-black shadow-2xs">
                     <Sparkles className="w-5 h-5 text-sky-600" />
                   </div>
                   <div>
@@ -534,7 +559,7 @@ export default function DashboardPage() {
                           ? "Campañas Disponibles"
                           : "Available Campaigns"}
                       </span>
-                      <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-sky-50 text-sky-800 border border-sky-200">
+                      <span className="text-xs font-black px-2.5 py-0.5 rounded-full bg-sky-50 text-sky-800 border border-sky-200">
                         {campaigns.length}{" "}
                         {language === "es" ? "activas" : "active"}
                       </span>
@@ -549,7 +574,7 @@ export default function DashboardPage() {
 
                 <Link
                   href="/dashboard/family"
-                  className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-900 text-xs font-bold transition-all"
+                  className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-900 text-xs font-bold transition-all shadow-2xs"
                 >
                   <Users2 className="w-3.5 h-3.5 text-amber-700" />
                   <span>
@@ -589,7 +614,7 @@ export default function DashboardPage() {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                  {campaigns.map((camp) => {
+                  {campaigns.map((camp, idx) => {
                     const campCands = getCampaignCandidates(camp);
                     const campCompletedCount = campCands.filter(
                       (c) => c.status === "completed"
@@ -605,10 +630,15 @@ export default function DashboardPage() {
                     ).length;
 
                     return (
-                      <div
+                      <motion.div
                         key={camp.id}
-                        className="p-5 sm:p-6 rounded-2xl border border-slate-200/90 bg-gradient-to-b from-slate-50/50 to-white hover:border-sky-300 hover:shadow-lg transition-all flex flex-col justify-between gap-5 group"
+                        initial={{ opacity: 0, y: 15 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: idx * 0.05, duration: 0.35 }}
+                        whileHover={{ y: -4, transition: { duration: 0.2 } }}
+                        className="p-5 sm:p-6 rounded-2xl border border-slate-200/90 bg-gradient-to-b from-slate-50/50 to-white hover:border-sky-300 hover:shadow-xl hover:shadow-sky-500/5 transition-all flex flex-col justify-between gap-5 group card-hover-lift"
                       >
+
                         <div className="space-y-3.5">
                           <div className="flex items-start justify-between gap-2">
                             <div className="flex flex-wrap items-center gap-1.5">
@@ -814,9 +844,10 @@ export default function DashboardPage() {
                             </Link>
                           </div>
                         </div>
-                      </div>
+                      </motion.div>
                     );
                   })}
+
                 </div>
               )}
             </div>
@@ -908,16 +939,23 @@ export default function DashboardPage() {
             </div>
 
             {/* BLOCK 1: CAMPAIGN TITLE & HERO HEADER */}
-            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-sky-950 via-indigo-950 to-slate-900 text-white p-6 sm:p-8 shadow-xl border-2 border-sky-400/40">
-              <div className="absolute right-0 top-0 -mt-10 -mr-10 w-64 h-64 rounded-full bg-sky-500/15 blur-3xl pointer-events-none" />
+            <motion.div
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+              className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-sky-950 via-indigo-950 to-slate-900 text-white p-6 sm:p-8 shadow-xl border-2 border-sky-400/30"
+            >
+              <div className="absolute right-0 top-0 -mt-10 -mr-10 w-80 h-80 rounded-full bg-sky-500/15 blur-3xl pointer-events-none" />
+              <div className="absolute left-1/4 bottom-0 -mb-10 w-64 h-64 rounded-full bg-indigo-500/10 blur-3xl pointer-events-none" />
+
               <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
                 <div className="space-y-3">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-[11px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-sky-400 text-slate-950">
+                    <span className="text-[11px] font-black uppercase tracking-wider px-3 py-1 rounded-full bg-sky-400 text-slate-950 shadow-2xs">
                       {language === "es" ? "Campaña Activa" : "Active Campaign"}
                     </span>
 
-                    <span className="text-xs font-bold text-sky-200 bg-white/10 px-2.5 py-0.5 rounded-md border border-white/15">
+                    <span className="text-xs font-bold text-sky-200 bg-white/10 px-3 py-1 rounded-full border border-white/15 backdrop-blur-xs">
                       {activeCampaign.careCategory === "elderly_care"
                         ? language === "es"
                           ? "👵 Adulto Mayor"
@@ -932,13 +970,13 @@ export default function DashboardPage() {
                     </span>
 
                     {activeRecipient && (
-                      <span className="text-xs text-amber-300 font-bold bg-amber-400/20 px-2.5 py-0.5 rounded-md border border-amber-400/30">
+                      <span className="text-xs text-amber-200 font-bold bg-amber-400/20 px-3 py-1 rounded-full border border-amber-400/30 backdrop-blur-xs">
                         • {activeRecipient.name} ({activeRecipient.age}{" "}
                         {language === "es" ? "años" : "yo"})
                       </span>
                     )}
 
-                    <span className="text-xs text-slate-300 bg-white/5 px-2 py-0.5 rounded-md">
+                    <span className="text-xs text-slate-300 bg-white/5 px-2.5 py-1 rounded-full border border-white/10">
                       {activeCampaign.scheduleType === "full_time"
                         ? language === "es"
                           ? "Tiempo Completo"
@@ -957,7 +995,7 @@ export default function DashboardPage() {
                     </span>
 
                     {activeCampaign.expectedHourlyRate && (
-                      <span className="text-xs text-emerald-300 font-bold bg-emerald-400/20 px-2 py-0.5 rounded-md border border-emerald-400/30">
+                      <span className="text-xs text-emerald-300 font-bold bg-emerald-400/20 px-3 py-1 rounded-full border border-emerald-400/30 backdrop-blur-xs">
                         Tarifa: {activeCampaign.expectedHourlyRate}
                       </span>
                     )}
@@ -974,17 +1012,17 @@ export default function DashboardPage() {
                   )}
 
                   {/* Collaboration Code Snippet */}
-                  <div className="flex flex-wrap items-center gap-3 pt-2 text-xs text-slate-300">
-                    <div className="flex items-center gap-1.5 bg-white/10 px-2.5 py-1 rounded-lg border border-white/15">
+                  <div className="flex flex-wrap items-center gap-3 pt-1 text-xs text-slate-300">
+                    <div className="flex items-center gap-2 bg-white/10 px-3 py-1.5 rounded-xl border border-white/15 backdrop-blur-xs">
                       <span className="text-slate-400 font-semibold">
                         {language === "es" ? "Código de Colaboración:" : "Share Code:"}
                       </span>
-                      <span className="font-mono font-bold text-white">
+                      <span className="font-mono font-black text-white text-xs tracking-wider">
                         {activeCampaign.shareCode || activeCampaign.id}
                       </span>
                       <button
                         onClick={() => handleCopyCampaignLink(activeCampaign)}
-                        className="ml-1 text-sky-300 hover:text-white font-bold cursor-pointer"
+                        className="ml-1 px-2 py-0.5 rounded bg-white/10 hover:bg-white/20 text-sky-300 hover:text-white font-bold cursor-pointer transition-colors"
                         title="Copiar enlace de acceso"
                       >
                         {copiedCampaignId === activeCampaign.id
@@ -1001,24 +1039,28 @@ export default function DashboardPage() {
 
                 {/* Campaign Action Buttons */}
                 <div className="flex flex-wrap items-center gap-2.5 shrink-0">
-                  <Link
-                    href={`/dashboard/new?campaignId=${activeCampaign.id}`}
-                    className="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-gradient-to-r from-sky-400 to-indigo-500 hover:from-sky-300 hover:to-indigo-400 text-slate-950 font-black text-xs sm:text-sm shadow-xl shadow-sky-500/25 transition-all active:scale-95 cursor-pointer"
-                  >
-                    <UserPlus className="w-4 h-4 stroke-[2.5]" />
-                    <span>
-                      {language === "es"
-                        ? "+ Evaluar Candidata"
-                        : "+ Evaluate Candidate"}
-                    </span>
-                  </Link>
+                  <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}>
+                    <Link
+                      href={`/dashboard/new?campaignId=${activeCampaign.id}`}
+                      className="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-gradient-to-r from-sky-400 to-indigo-400 hover:from-sky-300 hover:to-indigo-300 text-slate-950 font-black text-xs sm:text-sm shadow-xl shadow-sky-500/25 transition-all cursor-pointer"
+                    >
+                      <UserPlus className="w-4 h-4 stroke-[2.5]" />
+                      <span>
+                        {language === "es"
+                          ? "+ Evaluar Candidata"
+                          : "+ Evaluate Candidate"}
+                      </span>
+                    </Link>
+                  </motion.div>
 
-                  <button
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.97 }}
                     onClick={() => {
                       setEditingCampaign(activeCampaign);
                       setIsCreateCampaignOpen(true);
                     }}
-                    className="inline-flex items-center gap-2 px-4 py-3 rounded-2xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs sm:text-sm border border-white/20 backdrop-blur-md transition-all active:scale-95 cursor-pointer"
+                    className="inline-flex items-center gap-2 px-4 py-3 rounded-2xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs sm:text-sm border border-white/20 backdrop-blur-md transition-all cursor-pointer"
                   >
                     <Pencil className="w-4 h-4 text-sky-300" />
                     <span>
@@ -1026,11 +1068,13 @@ export default function DashboardPage() {
                         ? "Editar Campaña"
                         : "Edit Campaign"}
                     </span>
-                  </button>
+                  </motion.button>
 
-                  <button
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.97 }}
                     onClick={() => setShareCampaign(activeCampaign)}
-                    className="inline-flex items-center gap-2 px-4 py-3 rounded-2xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs sm:text-sm border border-white/20 backdrop-blur-md transition-all active:scale-95 cursor-pointer"
+                    className="inline-flex items-center gap-2 px-4 py-3 rounded-2xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs sm:text-sm border border-white/20 backdrop-blur-md transition-all cursor-pointer"
                   >
                     <Share2 className="w-4 h-4 text-purple-300" />
                     <span>
@@ -1038,46 +1082,62 @@ export default function DashboardPage() {
                         ? "Compartir Campaña"
                         : "Share Campaign"}
                     </span>
-                  </button>
+                  </motion.button>
                 </div>
               </div>
-            </div>
+            </motion.div>
 
-            {/* BLOCK 2: STATS ROW (SCOPED TO THIS CAMPAIGN) */}
+            {/* BLOCK 2: BENTO STATS ROW (SCOPED TO THIS CAMPAIGN) */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-xs">
+              <motion.div
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.05, duration: 0.35 }}
+                className="bg-white p-5 sm:p-6 rounded-3xl border border-slate-200/90 shadow-xs hover:shadow-md transition-all card-hover-lift relative overflow-hidden group"
+              >
+                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-sky-400 to-indigo-500" />
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                  <span className="text-xs font-black text-slate-500 uppercase tracking-wider">
                     {t.totalEvaluated}
                   </span>
-                  <Users className="w-4 h-4 text-slate-400" />
+                  <div className="w-8 h-8 rounded-xl bg-sky-50 text-sky-600 flex items-center justify-center">
+                    <Users className="w-4 h-4" />
+                  </div>
                 </div>
-                <p className="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-2">
+                <p className="text-3xl font-black text-slate-900 mt-3 tracking-tight">
                   {currentCampaignCandidates.length}
                 </p>
-                <p className="text-[11px] text-slate-400 mt-1">
+                <p className="text-[11px] text-slate-400 font-semibold mt-1">
                   {t.candidatesFinished(
                     completedCandidates.length,
                     pendingCandidates.length
                   )}
                 </p>
-              </div>
+              </motion.div>
 
-              <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-xs">
+              <motion.div
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1, duration: 0.35 }}
+                className="bg-white p-5 sm:p-6 rounded-3xl border border-slate-200/90 shadow-xs hover:shadow-md transition-all card-hover-lift relative overflow-hidden group"
+              >
+                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-400 to-teal-500" />
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                  <span className="text-xs font-black text-slate-500 uppercase tracking-wider">
                     {t.topCandidate}
                   </span>
-                  <UserCheck className="w-4 h-4 text-emerald-500" />
+                  <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                    <UserCheck className="w-4 h-4" />
+                  </div>
                 </div>
-                <p className="text-xl sm:text-2xl font-extrabold text-slate-900 mt-2 truncate">
+                <p className="text-xl sm:text-2xl font-black text-slate-900 mt-3 truncate tracking-tight">
                   {topCandidate
                     ? topCandidate.name
                     : language === "es"
                     ? "Ninguna aún"
                     : "None yet"}
                 </p>
-                <p className="text-[11px] text-emerald-600 font-semibold mt-1">
+                <p className="text-[11px] text-emerald-700 font-bold mt-1">
                   {topCandidate?.result
                     ? `${topCandidate.result.overallScore}% (${
                         language === "es" && topCandidate.result.tierEs
@@ -1086,48 +1146,64 @@ export default function DashboardPage() {
                       })`
                     : t.sendToViewRankings}
                 </p>
-              </div>
+              </motion.div>
 
-              <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-xs">
+              <motion.div
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.15, duration: 0.35 }}
+                className="bg-white p-5 sm:p-6 rounded-3xl border border-slate-200/90 shadow-xs hover:shadow-md transition-all card-hover-lift relative overflow-hidden group"
+              >
+                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-400 to-orange-500" />
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                  <span className="text-xs font-black text-slate-500 uppercase tracking-wider">
                     {t.pendingResponses}
                   </span>
-                  <Clock className="w-4 h-4 text-amber-500" />
+                  <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+                    <Clock className="w-4 h-4" />
+                  </div>
                 </div>
-                <p className="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-2">
+                <p className="text-3xl font-black text-slate-900 mt-3 tracking-tight">
                   {pendingCandidates.length}
                 </p>
-                <p className="text-[11px] text-slate-400 mt-1">
+                <p className="text-[11px] text-slate-400 font-semibold mt-1">
                   {t.testUrlsSent}
                 </p>
-              </div>
+              </motion.div>
 
-              <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-xs">
+              <motion.div
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2, duration: 0.35 }}
+                className="bg-white p-5 sm:p-6 rounded-3xl border border-slate-200/90 shadow-xs hover:shadow-md transition-all card-hover-lift relative overflow-hidden group"
+              >
+                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-rose-500 to-red-600" />
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                  <span className="text-xs font-black text-slate-500 uppercase tracking-wider">
                     {t.redFlagAlerts}
                   </span>
-                  <AlertOctagon className="w-4 h-4 text-rose-500" />
+                  <div className="w-8 h-8 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center">
+                    <AlertOctagon className="w-4 h-4" />
+                  </div>
                 </div>
-                <p className="text-2xl sm:text-3xl font-extrabold text-rose-600 mt-2">
+                <p className="text-3xl font-black text-rose-600 mt-3 tracking-tight">
                   {candidatesWithRedFlags.length}
                 </p>
-                <p className="text-[11px] text-rose-700 font-medium mt-1">
+                <p className="text-[11px] text-rose-700 font-bold mt-1">
                   {t.requiringCaution}
                 </p>
-              </div>
+              </motion.div>
             </div>
 
             {/* BLOCK 3: VIEW SWITCHER TABS (Mis Candidatas vs Pool de Candidatos/as) */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 pb-2">
-              <div className="flex items-center gap-2">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 pb-3">
+              <div className="flex items-center gap-2 p-1 bg-slate-100 rounded-2xl border border-slate-200/70">
                 <button
                   onClick={() => setDashboardView("candidates")}
-                  className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-black transition-all flex items-center gap-2 cursor-pointer ${
+                  className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-black transition-all flex items-center gap-2 cursor-pointer ${
                     dashboardView === "candidates"
-                      ? "bg-slate-900 text-white shadow-sm"
-                      : "bg-white text-slate-600 hover:bg-slate-100 border border-slate-200"
+                      ? "bg-white text-slate-900 shadow-sm"
+                      : "text-slate-600 hover:text-slate-900"
                   }`}
                 >
                   <UserCheck className="w-4 h-4" />
@@ -1137,10 +1213,10 @@ export default function DashboardPage() {
                       : "Evaluated Candidates"}
                   </span>
                   <span
-                    className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
+                    className={`px-2 py-0.5 rounded-full text-[11px] font-black ${
                       dashboardView === "candidates"
-                        ? "bg-white/20 text-white"
-                        : "bg-slate-100 text-slate-700"
+                        ? "bg-slate-900 text-white"
+                        : "bg-slate-200 text-slate-700"
                     }`}
                   >
                     {currentCampaignCandidates.length}
@@ -1149,25 +1225,27 @@ export default function DashboardPage() {
 
                 <button
                   onClick={() => setDashboardView("pool")}
-                  className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-black transition-all flex items-center gap-2 cursor-pointer ${
+                  className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-black transition-all flex items-center gap-2 cursor-pointer ${
                     dashboardView === "pool"
                       ? "bg-emerald-600 text-white shadow-sm"
-                      : "bg-white text-emerald-700 hover:bg-emerald-50 border border-emerald-200"
+                      : "text-emerald-800 hover:text-emerald-950"
                   }`}
                 >
-                  <Sparkles className="w-4 h-4 text-emerald-500 fill-emerald-500" />
+                  <Sparkles className="w-4 h-4 text-amber-300 fill-amber-300" />
                   <span>
                     {language === "es"
                       ? "Pool de Candidatos/as Disponibles"
                       : "Verified Candidates Pool"}
                   </span>
-                  <span className="text-[10px] uppercase font-black px-1.5 py-0.5 rounded-md bg-emerald-100 text-emerald-800">
+                  <span className={`text-[10px] uppercase font-black px-1.5 py-0.5 rounded-md ${dashboardView === "pool" ? "bg-white/20 text-white" : "bg-emerald-100 text-emerald-800"}`}>
                     {language === "es" ? "Reclutar" : "Hire"}
                   </span>
                 </button>
               </div>
 
               {dashboardView === "candidates" && (
+
+
                 <Link
                   href={`/dashboard/new?campaignId=${activeCampaign.id}`}
                   className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-black shadow-xs transition-colors self-start sm:self-auto"

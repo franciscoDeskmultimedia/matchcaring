@@ -5,9 +5,11 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import AgeTargetedAdCard from "@/components/AgeTargetedAdCard";
-import { Child, CustomQuestion, CustomQuestionType, User } from "@/lib/types";
+import { Child, CustomQuestion, CustomQuestionType, ParentCampaign, User } from "@/lib/types";
 import { DEFAULT_QUESTION_BANK_GROUPS } from "@/lib/questionBank";
 import QuestionBankModal from "@/components/QuestionBankModal";
+import PsychometricBatterySelector from "@/components/PsychometricBatterySelector";
+import { getRecommendedBatteriesForRecipient } from "@/lib/psychometricBatteries";
 import { useLanguage } from "@/components/LanguageContext";
 import {
   AlignLeft,
@@ -42,6 +44,7 @@ export default function NewCandidatePage() {
   const [submitting, setSubmitting] = useState(false);
 
   // Form Fields
+  const [userCampaigns, setUserCampaigns] = useState<ParentCampaign[]>([]);
   const [campaignId, setCampaignId] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [roleTarget, setRoleTarget] = useState("");
@@ -49,6 +52,13 @@ export default function NewCandidatePage() {
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [parentNotes, setParentNotes] = useState("");
+
+  // Psychometric Batteries Selection state
+  const [selectedBatteryIds, setSelectedBatteryIds] = useState<string[]>([
+    "sjt_base",
+    "buss_perry",
+    "marlowe_crowne",
+  ]);
 
   // Custom Questions Builder state
   const [customQuestions, setCustomQuestions] = useState<CustomQuestion[]>([]);
@@ -70,12 +80,13 @@ export default function NewCandidatePage() {
     if (!newChildName.trim()) return;
     setSavingChild(true);
     try {
+      const childAgeNum = parseInt(newChildAge, 10);
       const res = await fetch("/api/children", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: newChildName.trim(),
-          age: parseInt(newChildAge, 10),
+          age: childAgeNum,
           notes: newChildNotes.trim(),
         }),
       });
@@ -85,6 +96,7 @@ export default function NewCandidatePage() {
         setFamilyChildren(updated);
         setSelectedChildIds([data.child.id]);
         updateDefaultRole([data.child]);
+        setSelectedBatteryIds(getRecommendedBatteriesForRecipient(childAgeNum));
         setNewChildName("");
         setNewChildNotes("");
         setShowQuickAddChild(false);
@@ -144,35 +156,70 @@ export default function NewCandidatePage() {
         initialSelectedIds = allIds;
       }
 
-      if (targetCampParam) {
-        setCampaignId(targetCampParam);
-        try {
-          const campRes = await fetch("/api/campaigns");
-          if (campRes.ok) {
-            const campData = await campRes.json();
-            const matched = (campData.campaigns || []).find((c: any) => c.id === targetCampParam);
-            if (matched) {
-              if (matched.customQuestions && matched.customQuestions.length > 0) {
-                setCustomQuestions(matched.customQuestions);
-              }
-              if (matched.targetChildren && matched.targetChildren.length > 0) {
-                const campChildIds = matched.targetChildren.map((tc: any) => tc.id);
-                initialSelectedIds = campChildIds;
-              }
-            }
-          }
-        } catch (cErr) {
-          console.error("Error preloading campaign in invitation:", cErr);
+      // Fetch campaigns unconditionally so user can select or see the target campaign
+      let camps: ParentCampaign[] = [];
+      try {
+        const campRes = await fetch("/api/campaigns");
+        if (campRes.ok) {
+          const campData = await campRes.json();
+          camps = campData.campaigns || [];
+          setUserCampaigns(camps);
+        }
+      } catch (cErr) {
+        console.error("Error preloading campaigns in invitation:", cErr);
+      }
+
+      // Determine active target campaign: query param takes priority, else default to first campaign
+      const activeCamp = targetCampParam
+        ? camps.find((c: any) => c.id === targetCampParam)
+        : camps.length > 0
+        ? camps[0]
+        : null;
+
+      if (activeCamp) {
+        setCampaignId(activeCamp.id);
+        if (activeCamp.customQuestions && activeCamp.customQuestions.length > 0) {
+          setCustomQuestions(activeCamp.customQuestions);
+        }
+        if (activeCamp.selectedBatteryIds && activeCamp.selectedBatteryIds.length > 0) {
+          setSelectedBatteryIds(activeCamp.selectedBatteryIds);
+        }
+        if (activeCamp.targetChildren && activeCamp.targetChildren.length > 0) {
+          const campChildIds = activeCamp.targetChildren.map((tc: any) => tc.id);
+          initialSelectedIds = campChildIds;
         }
       }
 
       setSelectedChildIds(initialSelectedIds);
       const activeKids = kids.filter((k) => initialSelectedIds.includes(k.id));
       updateDefaultRole(activeKids);
+
+      if (!activeCamp && activeKids.length > 0) {
+        setSelectedBatteryIds(getRecommendedBatteriesForRecipient(activeKids[0].age));
+      }
     } catch (e) {
       console.error(e);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSelectCampaign = (newCampId: string) => {
+    setCampaignId(newCampId);
+    const matched = userCampaigns.find((c) => c.id === newCampId);
+    if (matched) {
+      if (matched.customQuestions && matched.customQuestions.length > 0) {
+        setCustomQuestions(matched.customQuestions);
+      }
+      if (matched.selectedBatteryIds && matched.selectedBatteryIds.length > 0) {
+        setSelectedBatteryIds(matched.selectedBatteryIds);
+      }
+      if (matched.targetChildren && matched.targetChildren.length > 0) {
+        const campKids = matched.targetChildren.map((tc) => tc.id);
+        setSelectedChildIds(campKids);
+        const activeKids = familyChildren.filter((k) => campKids.includes(k.id));
+        updateDefaultRole(activeKids);
+      }
     }
   };
 
@@ -208,6 +255,9 @@ export default function NewCandidatePage() {
     setSelectedChildIds(nextIds);
     const activeKids = familyChildren.filter((k) => nextIds.includes(k.id));
     updateDefaultRole(activeKids);
+    if (activeKids.length > 0) {
+      setSelectedBatteryIds(getRecommendedBatteriesForRecipient(activeKids[0].age));
+    }
   };
 
   // Custom Questions Builder Handlers
@@ -429,7 +479,7 @@ export default function NewCandidatePage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          campaignId: campaignId || undefined,
+          campaignId: campaignId || (userCampaigns.length > 0 ? userCampaigns[0].id : undefined),
           name,
           roleTarget,
           targetChildren,
@@ -438,6 +488,7 @@ export default function NewCandidatePage() {
           email,
           parentNotes,
           customQuestions: validCustomQuestions,
+          selectedBatteryIds,
         }),
       });
 
@@ -512,6 +563,43 @@ export default function NewCandidatePage() {
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Campaign Picker (Strict Campaign Exclusivity) */}
+              {userCampaigns.length > 0 && (
+                <div className="p-4 rounded-2xl bg-gradient-to-r from-sky-50/70 via-indigo-50/30 to-white border border-sky-200/90 space-y-2 shadow-2xs">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-black uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
+                      <Layers className="w-4 h-4 text-sky-600" />
+                      <span>
+                        {language === "es"
+                          ? "Campaña a la que pertenecerá esta evaluación *"
+                          : "Campaign this candidate evaluation belongs to *"}
+                      </span>
+                    </label>
+                    <span className="text-[10px] font-bold text-sky-700 bg-sky-100/90 px-2 py-0.5 rounded-md border border-sky-200/60">
+                      {language === "es" ? "Exclusivo por campaña" : "Campaign exclusive"}
+                    </span>
+                  </div>
+
+                  <select
+                    value={campaignId || ""}
+                    onChange={(e) => handleSelectCampaign(e.target.value)}
+                    className="w-full px-3.5 py-2.5 text-xs sm:text-sm font-bold border border-slate-200 rounded-xl bg-white text-slate-900 outline-none focus:ring-2 focus:ring-sky-500 shadow-2xs cursor-pointer"
+                  >
+                    {userCampaigns.map((camp) => (
+                      <option key={camp.id} value={camp.id}>
+                        {camp.title} ({camp.careCategory === "elderly_care" ? (language === "es" ? "Adulto Mayor" : "Senior Care") : (language === "es" ? "Cuidado Infantil" : "Childcare")})
+                      </option>
+                    ))}
+                  </select>
+
+                  <p className="text-[11px] text-slate-500 font-medium">
+                    {language === "es"
+                      ? "Esta evaluación y sus resultados serán 100% exclusivos de la campaña seleccionada y no se mezclarán con otras."
+                      : "This assessment and its results will be 100% exclusive to this campaign and will never leak into others."}
+                  </p>
+                </div>
+              )}
+
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
                   {t.fullName}
@@ -738,6 +826,21 @@ export default function NewCandidatePage() {
                   </div>
                 </label>
               </div>
+
+              {/* Standardized Clinical & Psychometric Batteries Selection */}
+              <PsychometricBatterySelector
+                selectedBatteryIds={selectedBatteryIds}
+                onChange={setSelectedBatteryIds}
+                targetAge={
+                  familyChildren.find((k) => selectedChildIds.includes(k.id))?.age
+                }
+                recipientLabel={
+                  familyChildren
+                    .filter((k) => selectedChildIds.includes(k.id))
+                    .map((k) => `${k.name} (${k.age} ${language === "es" ? "años" : "yo"})`)
+                    .join(", ")
+                }
+              />
 
               {/* Family Custom Questions Builder */}
               <div className="p-5 rounded-2xl bg-gradient-to-b from-sky-50/50 to-slate-50/80 border border-sky-200/70 shadow-xs space-y-4">

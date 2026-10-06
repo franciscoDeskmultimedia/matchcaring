@@ -147,7 +147,64 @@ export interface AssessmentResult {
     rationale: string;
     rationaleEs?: string;
   }[];
+  psychometricReport?: PsychometricReport;
   completedAt: string;
+}
+
+export interface PsychometricBatteryMeta {
+  id: string;
+  name: string;
+  nameEs: string;
+  scientificBasis: string;
+  phase: 1 | 2;
+  badgeEs: string;
+  badgeEn: string;
+  description: string;
+  descriptionEs: string;
+  targetRecommendationEs: string;
+  targetRecommendationEn: string;
+  estimatedTimeMinutes: number;
+  questionCount: number;
+  isBase?: boolean;
+}
+
+export interface PsychometricReport {
+  selectedBatteryIds: string[];
+  honestyScore?: {
+    indexPercent: number; // 0 to 100%
+    rating: "Alta Sinceridad" | "Sinceridad Moderada" | "Deseabilidad Social Elevada (Sesgo de Perfección)";
+    ratingEn: string;
+    explanationEs: string;
+    explanationEn: string;
+    flaggedItemsCount: number;
+  };
+  angerControlScore?: {
+    controlPercent: number; // 0 to 100%
+    riskLevel: "Bajo Riesgo / Óptimo" | "Riesgo Moderado" | "Alerta Crítica de Impulsividad";
+    riskLevelEn: string;
+    explanationEs: string;
+    explanationEn: string;
+    criticalAlert: boolean;
+  };
+  empathyScore?: {
+    empathyPercent: number;
+    perspectiveTakingPercent: number;
+    nonVerbalSensitivity: "Sobresaliente" | "Adecuada" | "Baja Sensibilidad";
+    explanationEs: string;
+  };
+  bigFiveProfile?: {
+    conscientiousness: number; // Responsabilidad
+    agreeableness: number;     // Calidez
+    emotionalStability: number;// Estabilidad
+    energy: number;            // Extraversión/Dinamismo
+    adaptability: number;      // Flexibilidad
+  };
+  attachmentProfile?: {
+    style: "Apego Seguro" | "Apego Ansioso" | "Apego Evitativo";
+    styleEn: string;
+    confidencePercent: number;
+    explanationEs: string;
+  };
 }
 
 export type CustomQuestionType = "multiple_choice" | "open_text";
@@ -187,6 +244,7 @@ export interface Candidate {
   parentNotes?: string;
   customQuestions?: CustomQuestion[];
   customAnswers?: CustomAnswer[];
+  selectedBatteryIds?: string[];
   inTalentPool?: boolean;
   talentPoolStatus?: "available" | "placed" | "review";
 }
@@ -232,6 +290,7 @@ export interface ParentCampaign {
   startDate?: string;
   notes?: string;
   customQuestions?: CustomQuestion[];
+  selectedBatteryIds?: string[];
   active: boolean;
   publicToken?: string;
   shareCode?: string; // Shareable code for family / recruiter co-management
