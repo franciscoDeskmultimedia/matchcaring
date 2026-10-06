@@ -42,6 +42,7 @@ export default function NewCandidatePage() {
   const [submitting, setSubmitting] = useState(false);
 
   // Form Fields
+  const [campaignId, setCampaignId] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [roleTarget, setRoleTarget] = useState("");
   const [askHourlyRate, setAskHourlyRate] = useState(true);
@@ -134,6 +135,11 @@ export default function NewCandidatePage() {
       const urlParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
       const targetChildParam = urlParams?.get("child");
       const targetModeParam = urlParams?.get("mode");
+      const targetCampParam = urlParams?.get("campaignId");
+
+      if (targetCampParam) {
+        setCampaignId(targetCampParam);
+      }
 
       let initialSelectedIds = allIds;
       if (targetChildParam && kids.some((k) => k.id === targetChildParam)) {
@@ -405,6 +411,7 @@ export default function NewCandidatePage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          campaignId: campaignId || undefined,
           name,
           roleTarget,
           targetChildren,

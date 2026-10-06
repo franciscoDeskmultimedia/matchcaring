@@ -116,6 +116,8 @@ export async function ensurePostgresSchema(): Promise<void> {
       );
       CREATE INDEX IF NOT EXISTS idx_candidates_user ON candidates(user_id);
       CREATE INDEX IF NOT EXISTS idx_candidates_token ON candidates(token);
+      ALTER TABLE candidates ADD COLUMN IF NOT EXISTS campaign_id VARCHAR(64);
+      CREATE INDEX IF NOT EXISTS idx_candidates_campaign ON candidates(campaign_id);
 
       CREATE TABLE IF NOT EXISTS parent_campaigns (
           id VARCHAR(64) PRIMARY KEY,
@@ -373,6 +375,7 @@ function mapCandidateRow(row: any): Candidate {
   return {
     id: row.id,
     userId: row.user_id,
+    campaignId: row.campaign_id || undefined,
     token: row.token,
     name: row.name,
     roleTarget: row.role_target,
@@ -426,6 +429,7 @@ export async function pgGetCandidateByToken(token: string): Promise<Candidate | 
 
 export async function pgCreateCandidate(data: {
   userId: string;
+  campaignId?: string;
   name: string;
   roleTarget: string;
   phone?: string;
@@ -442,13 +446,14 @@ export async function pgCreateCandidate(data: {
 
   const res = await pool.query(
     `INSERT INTO candidates (
-       id, user_id, token, name, role_target, phone, email, status,
+       id, user_id, campaign_id, token, name, role_target, phone, email, status,
        target_children, parent_custom_questions, parent_notes, created_at, updated_at
-     ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'invited', $8, $9, $10, $11, $11)
+     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'invited', $9, $10, $11, $12, $12)
      RETURNING *`,
     [
       id,
       data.userId,
+      data.campaignId || null,
       token,
       data.name,
       data.roleTarget,

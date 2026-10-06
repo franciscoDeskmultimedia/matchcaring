@@ -10,6 +10,7 @@ import {
   UserPlus,
   Eye,
   Users,
+  Users2,
   ChevronDown,
   Sparkles,
   ShieldAlert,
@@ -105,18 +106,24 @@ export default function Navbar({
                     : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
                 }`}
               >
-                {language === "es" ? "Panel Principal" : "Dashboard"}
+                {language === "es" ? "Campañas" : "Campaigns"}
               </Link>
 
               <Link
-                href="/dashboard?view=pool"
-                className="px-3 py-1.5 rounded-xl text-xs font-bold text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-all flex items-center gap-1.5"
+                href="/dashboard/family"
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+                  pathname === "/dashboard/family"
+                    ? "bg-amber-50 text-amber-900 font-black border border-amber-200/80 shadow-2xs"
+                    : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+                }`}
               >
-                <Users className="w-3.5 h-3.5 text-sky-600" />
-                <span>{language === "es" ? "Pool de Niñeras" : "Nanny Pool"}</span>
-                <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-emerald-100 text-emerald-800 font-extrabold">
-                  {language === "es" ? "Disponibles" : "Ready"}
-                </span>
+                <Users2 className="w-3.5 h-3.5 text-amber-600" />
+                <span>{language === "es" ? "Personas a Cuidar" : "Care Recipients"}</span>
+                {childrenCount > 0 && (
+                  <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-amber-100 text-amber-800 font-extrabold">
+                    {childrenCount}
+                  </span>
+                )}
               </Link>
             </nav>
           )}
@@ -206,11 +213,11 @@ export default function Navbar({
                           <span>{t.familyChildren}</span>
                         </span>
                         <Link
-                          href="/dashboard?manageChildren=true"
+                          href="/dashboard/family"
                           onClick={() => setIsDropdownOpen(false)}
                           className="text-[11px] font-bold text-amber-700 hover:text-amber-900 hover:underline"
                         >
-                          {language === "es" ? "Gestionar Hijos" : "Manage"} &rarr;
+                          {language === "es" ? "Administrar" : "Manage"} &rarr;
                         </Link>
                       </div>
                       <p className="text-[11px] text-amber-800/90 truncate">
@@ -221,8 +228,8 @@ export default function Navbar({
                           : user.childProfile
                           ? `${user.childProfile.name} (${user.childProfile.age}a)`
                           : language === "es"
-                          ? "Sin hijos registrados"
-                          : "No children added"}
+                          ? "Sin familiares registrados"
+                          : "No care recipients added"}
                       </p>
                     </div>
 
@@ -247,7 +254,7 @@ export default function Navbar({
                         <Eye className="w-4 h-4 text-sky-600" />
                         <span>
                           {language === "es"
-                            ? "Vista Previa del Test de Niñera"
+                            ? "Vista Previa del Test de Evaluación"
                             : "Assessment Form Preview"}
                         </span>
                       </Link>
@@ -284,15 +291,15 @@ export default function Navbar({
                       )}
 
                       <Link
-                        href="/dashboard?manageChildren=true"
+                        href="/dashboard/family"
                         onClick={() => setIsDropdownOpen(false)}
-                        className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-colors"
+                        className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-amber-900 hover:bg-amber-50 transition-colors"
                       >
-                        <Baby className="w-4 h-4 text-amber-600" />
+                        <Users2 className="w-4 h-4 text-amber-600" />
                         <span>
                           {language === "es"
-                            ? "+ Agregar / Editar Hijos"
-                            : "+ Add / Edit Children"}
+                            ? "Personas y Familiares a Cuidar"
+                            : "Family & Care Recipients"}
                         </span>
                       </Link>
                     </div>

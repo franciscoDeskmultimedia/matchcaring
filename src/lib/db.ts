@@ -454,6 +454,7 @@ export async function getCandidateByToken(token: string): Promise<Candidate | un
 
 export async function createCandidate(data: {
   userId: string;
+  campaignId?: string;
   name: string;
   roleTarget: string;
   targetChildren?: Child[];
@@ -469,6 +470,7 @@ export async function createCandidate(data: {
   const newCandidate: Candidate = {
     id: `cand_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
     userId: data.userId,
+    campaignId: data.campaignId,
     token,
     name: data.name,
     roleTarget: data.roleTarget,

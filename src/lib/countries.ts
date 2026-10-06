@@ -40,3 +40,146 @@ export const COUNTRIES: CountryInfo[] = [
 export function getCountryByCode(code: string): CountryInfo {
   return COUNTRIES.find((c) => c.code === code) || COUNTRIES[0];
 }
+
+export function detectUserCountry(): string {
+  if (typeof window === "undefined") return "MX";
+
+  try {
+    // 1. TimeZone detection
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    if (tz) {
+      const tzMap: Record<string, string> = {
+        // Peru
+        "America/Lima": "PE",
+        // Mexico
+        "America/Mexico_City": "MX",
+        "America/Cancun": "MX",
+        "America/Merida": "MX",
+        "America/Monterrey": "MX",
+        "America/Mazatlan": "MX",
+        "America/Chihuahua": "MX",
+        "America/Hermosillo": "MX",
+        "America/Tijuana": "MX",
+        "America/Matamoros": "MX",
+        "America/Ojinaga": "MX",
+        "America/Bahia_Banderas": "MX",
+        // Colombia
+        "America/Bogota": "CO",
+        // Spain
+        "Europe/Madrid": "ES",
+        "Atlantic/Canary": "ES",
+        "Africa/Ceuta": "ES",
+        // Argentina
+        "America/Buenos_Aires": "AR",
+        "America/Argentina/Buenos_Aires": "AR",
+        "America/Cordoba": "AR",
+        "America/Rosario": "AR",
+        "America/Mendoza": "AR",
+        "America/Argentina/Cordoba": "AR",
+        "America/Argentina/Mendoza": "AR",
+        // Chile
+        "America/Santiago": "CL",
+        "America/Punta_Arenas": "CL",
+        "Pacific/Easter": "CL",
+        // Ecuador
+        "America/Guayaquil": "EC",
+        "Pacific/Galapagos": "EC",
+        // Guatemala
+        "America/Guatemala": "GT",
+        // Costa Rica
+        "America/Costa_Rica": "CR",
+        // Panama
+        "America/Panama": "PA",
+        // Dominican Republic
+        "America/Santo_Domingo": "DO",
+        // Uruguay
+        "America/Montevideo": "UY",
+        // Paraguay
+        "America/Asuncion": "PY",
+        // Bolivia
+        "America/La_Paz": "BO",
+        // Honduras
+        "America/Tegucigalpa": "HN",
+        // El Salvador
+        "America/El_Salvador": "SV",
+        // Nicaragua
+        "America/Managua": "NI",
+        // Venezuela
+        "America/Caracas": "VE",
+        // Brazil
+        "America/Sao_Paulo": "BR",
+        "America/Rio_Branco": "BR",
+        "America/Manaus": "BR",
+        "America/Belem": "BR",
+        "America/Fortaleza": "BR",
+        "America/Recife": "BR",
+        "America/Cuiaba": "BR",
+        // United States
+        "America/New_York": "US",
+        "America/Chicago": "US",
+        "America/Denver": "US",
+        "America/Los_Angeles": "US",
+        "America/Phoenix": "US",
+        "America/Anchorage": "US",
+        "Pacific/Honolulu": "US",
+        "America/Detroit": "US",
+        "America/Indiana/Indianapolis": "US",
+        "America/Boise": "US",
+        // Canada
+        "America/Toronto": "CA",
+        "America/Vancouver": "CA",
+        "America/Montreal": "CA",
+        "America/Edmonton": "CA",
+        "America/Calgary": "CA",
+        "America/Winnipeg": "CA",
+        "America/Halifax": "CA",
+        "America/St_Johns": "CA",
+        // United Kingdom
+        "Europe/London": "GB",
+        // France
+        "Europe/Paris": "FR",
+        // Germany
+        "Europe/Berlin": "DE",
+        // Italy
+        "Europe/Rome": "IT",
+        // Portugal
+        "Europe/Lisbon": "PT",
+        "Atlantic/Madeira": "PT",
+        "Atlantic/Azores": "PT",
+      };
+
+      if (tzMap[tz]) {
+        return tzMap[tz];
+      }
+
+      if (tz.startsWith("America/Argentina/")) return "AR";
+      if (
+        tz.startsWith("America/Indiana/") ||
+        tz.startsWith("America/Kentucky/") ||
+        tz.startsWith("America/North_Dakota/")
+      ) {
+        return "US";
+      }
+    }
+
+    // 2. Fallback to navigator.languages / navigator.language
+    const languages =
+      typeof navigator !== "undefined"
+        ? navigator.languages || [navigator.language]
+        : [];
+    for (const lang of languages) {
+      if (lang && lang.includes("-")) {
+        const parts = lang.split("-");
+        const region = parts[parts.length - 1].toUpperCase();
+        if (COUNTRIES.some((c) => c.code === region)) {
+          return region;
+        }
+      }
+    }
+  } catch (e) {
+    console.error("Error in detectUserCountry:", e);
+  }
+
+  return "MX";
+}
+

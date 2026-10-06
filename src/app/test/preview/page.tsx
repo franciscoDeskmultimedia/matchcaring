@@ -5,7 +5,7 @@ import Link from "next/link";
 import { ASSESSMENT_QUESTIONS } from "@/lib/questions";
 import { evaluateAssessment } from "@/lib/scoring";
 import { AssessmentResult, CandidateProfile, CandidateResponse, CustomQuestion } from "@/lib/types";
-import { COUNTRIES, getCountryByCode } from "@/lib/countries";
+import { COUNTRIES, getCountryByCode, detectUserCountry } from "@/lib/countries";
 import { useLanguage } from "@/components/LanguageContext";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import ScoreGauge from "@/components/ScoreGauge";
@@ -94,29 +94,29 @@ export default function TestPreviewPage() {
     },
   ];
 
-  const defaultCountryCode = language === "es" ? "MX" : "US";
-  const defaultCountry = getCountryByCode(defaultCountryCode);
-
-  // Sample profile
-  const [profile, setProfile] = useState<CandidateProfile>({
-    fullName: language === "es" ? "Camila Rodriguez (Vista Previa)" : "Camila Rodriguez (Preview)",
-    countryOfOrigin: defaultCountryCode,
-    countryOfResidence: defaultCountryCode,
-    phoneDialCode: defaultCountry.dialCode,
-    phone: "55 4321 8765",
-    email: "camila.preview@example.com",
-    yearsOfExperience: 5,
-    hasCprCertification: true,
-    cprExpirationDate: "2027-06-30",
-    hasEarlyChildhoodEducation: true,
-    highestEducation: "Associate Degree in Early Childhood",
-    authorizedToWork: true,
-    availableStartDate: "In 2 weeks",
-    preferredHourlyRate: "$28 - $32 / hr",
-    personalStatement:
-      language === "es"
-        ? "Apasionada por la crianza respetuosa, actividades lúdicas al aire libre y rutinas seguras para niños pequeños y sus hermanitos."
-        : "Passionate about gentle authoritative care, sensory exploration, and creating peaceful, structured routines for toddlers and siblings.",
+  const [profile, setProfile] = useState<CandidateProfile>(() => {
+    const detectedCode = detectUserCountry();
+    const cData = getCountryByCode(detectedCode);
+    return {
+      fullName: language === "es" ? "Camila Rodriguez (Vista Previa)" : "Camila Rodriguez (Preview)",
+      countryOfOrigin: detectedCode,
+      countryOfResidence: detectedCode,
+      phoneDialCode: cData.dialCode,
+      phone: "55 4321 8765",
+      email: "camila.preview@example.com",
+      yearsOfExperience: 5,
+      hasCprCertification: true,
+      cprExpirationDate: "2027-06-30",
+      hasEarlyChildhoodEducation: true,
+      highestEducation: "Associate Degree in Early Childhood",
+      authorizedToWork: true,
+      availableStartDate: "In 2 weeks",
+      preferredHourlyRate: "$28 - $32 / hr",
+      personalStatement:
+        language === "es"
+          ? "Apasionada por la crianza respetuosa, actividades lúdicas al aire libre y rutinas seguras para niños pequeños y sus hermanitos."
+          : "Passionate about gentle authoritative care, sensory exploration, and creating peaceful, structured routines for toddlers and siblings.",
+    };
   });
 
   // Filter questions depending on child scenario
@@ -742,7 +742,7 @@ export default function TestPreviewPage() {
                       {t.countryOfOrigin}
                     </label>
                     <select
-                      value={profile.countryOfOrigin || defaultCountryCode}
+                      value={profile.countryOfOrigin || "MX"}
                       onChange={(e) => setProfile({ ...profile, countryOfOrigin: e.target.value })}
                       className="w-full px-3.5 py-2.5 text-sm border border-slate-200 rounded-xl focus:ring-2 focus:ring-sky-500 outline-none bg-white cursor-pointer"
                     >
@@ -759,7 +759,7 @@ export default function TestPreviewPage() {
                       {t.countryOfResidence}
                     </label>
                     <select
-                      value={profile.countryOfResidence || defaultCountryCode}
+                      value={profile.countryOfResidence || "MX"}
                       onChange={(e) => {
                         const newCode = e.target.value;
                         const cData = getCountryByCode(newCode);
@@ -788,7 +788,7 @@ export default function TestPreviewPage() {
                     </label>
                     {(() => {
                       const residenceCountry = getCountryByCode(
-                        profile.countryOfResidence || defaultCountryCode
+                        profile.countryOfResidence || "MX"
                       );
                       return (
                         <div className="flex items-center gap-2">

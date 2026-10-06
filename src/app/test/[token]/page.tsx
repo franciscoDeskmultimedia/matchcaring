@@ -3,7 +3,7 @@
 import { useEffect, useState, use } from "react";
 import confetti from "canvas-confetti";
 import { CandidateProfile, CandidateResponse, CustomAnswer, CustomQuestion } from "@/lib/types";
-import { COUNTRIES, getCountryByCode } from "@/lib/countries";
+import { COUNTRIES, getCountryByCode, detectUserCountry } from "@/lib/countries";
 import { useLanguage } from "@/components/LanguageContext";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import {
@@ -70,26 +70,27 @@ export default function CandidateTestPage({
   const [submitting, setSubmitting] = useState(false);
   const [completed, setCompleted] = useState(false);
 
-  // Profile Form state
-  const defaultCountryCode = language === "es" ? "MX" : "US";
-  const defaultCountry = getCountryByCode(defaultCountryCode);
-
-  const [profile, setProfile] = useState<CandidateProfile>({
-    fullName: "",
-    countryOfOrigin: defaultCountryCode,
-    countryOfResidence: defaultCountryCode,
-    phoneDialCode: defaultCountry.dialCode,
-    phone: "",
-    email: "",
-    yearsOfExperience: 3,
-    hasCprCertification: true,
-    cprExpirationDate: "",
-    hasEarlyChildhoodEducation: false,
-    highestEducation: "Some College / Training",
-    authorizedToWork: true,
-    availableStartDate: "Within 2 weeks",
-    preferredHourlyRate: "$25 - $30 / hr",
-    personalStatement: "",
+  // Profile Form state: preselect country based on detected location
+  const [profile, setProfile] = useState<CandidateProfile>(() => {
+    const detectedCode = detectUserCountry();
+    const cData = getCountryByCode(detectedCode);
+    return {
+      fullName: "",
+      countryOfOrigin: detectedCode,
+      countryOfResidence: detectedCode,
+      phoneDialCode: cData.dialCode,
+      phone: "",
+      email: "",
+      yearsOfExperience: 3,
+      hasCprCertification: true,
+      cprExpirationDate: "",
+      hasEarlyChildhoodEducation: false,
+      highestEducation: "Some College / Training",
+      authorizedToWork: true,
+      availableStartDate: "Within 2 weeks",
+      preferredHourlyRate: "$25 - $30 / hr",
+      personalStatement: "",
+    };
   });
 
   // Responses map: questionId -> selectedOptionId
@@ -99,6 +100,21 @@ export default function CandidateTestPage({
 
   useEffect(() => {
     fetchTest();
+    // Also refine country preselection using /api/geo
+    fetch("/api/geo")
+      .then((r) => r.json())
+      .then((geo) => {
+        if (geo?.country) {
+          const cData = getCountryByCode(geo.country);
+          setProfile((prev) => ({
+            ...prev,
+            countryOfOrigin: prev.countryOfOrigin || geo.country,
+            countryOfResidence: prev.countryOfResidence || geo.country,
+            phoneDialCode: prev.phoneDialCode || cData.dialCode,
+          }));
+        }
+      })
+      .catch(() => {});
   }, [token]);
 
   const fetchTest = async () => {
@@ -378,7 +394,7 @@ export default function CandidateTestPage({
                 </label>
                 <div className="relative">
                   <select
-                    value={profile.countryOfOrigin || defaultCountryCode}
+                    value={profile.countryOfOrigin || "MX"}
                     onChange={(e) => setProfile({ ...profile, countryOfOrigin: e.target.value })}
                     className="w-full px-3.5 py-2.5 text-sm border border-slate-200 rounded-xl focus:ring-2 focus:ring-sky-500 outline-none bg-white cursor-pointer"
                   >
@@ -397,7 +413,7 @@ export default function CandidateTestPage({
                 </label>
                 <div className="relative">
                   <select
-                    value={profile.countryOfResidence || defaultCountryCode}
+                    value={profile.countryOfResidence || "MX"}
                     onChange={(e) => {
                       const newCode = e.target.value;
                       const cData = getCountryByCode(newCode);
@@ -426,7 +442,7 @@ export default function CandidateTestPage({
                   {t.mobileNumber}
                 </label>
                 {(() => {
-                  const residenceCountry = getCountryByCode(profile.countryOfResidence || defaultCountryCode);
+                  const residenceCountry = getCountryByCode(profile.countryOfResidence || "MX");
                   return (
                     <div className="flex items-center gap-2">
                       <div className="flex items-center gap-1.5 px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-700 shrink-0">

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Candidate, Child } from "@/lib/types";
+import { Candidate, CareCategory, Child } from "@/lib/types";
 import { useLanguage } from "./LanguageContext";
 import {
   Baby,
@@ -23,12 +23,14 @@ import {
 interface NannyPoolExplorerProps {
   childrenList: Child[];
   onNannyInvited: (candidate: Candidate) => void;
+  defaultCategory?: CareCategory | "all";
   className?: string;
 }
 
 export default function NannyPoolExplorer({
   childrenList,
   onNannyInvited,
+  defaultCategory = "all",
   className = "",
 }: NannyPoolExplorerProps) {
   const { language } = useLanguage();
@@ -42,7 +44,16 @@ export default function NannyPoolExplorer({
   const [selectedChildIds, setSelectedChildIds] = useState<string[]>([]);
   const [inviting, setInviting] = useState(false);
 
-  const [domainFilter, setDomainFilter] = useState<"all" | "childcare" | "elderly" | "disability">("all");
+  const initialDomain: "all" | "childcare" | "elderly" | "disability" =
+    defaultCategory === "elderly_care"
+      ? "elderly"
+      : defaultCategory === "disability_care"
+      ? "disability"
+      : defaultCategory === "childcare"
+      ? "childcare"
+      : "all";
+
+  const [domainFilter, setDomainFilter] = useState<"all" | "childcare" | "elderly" | "disability">(initialDomain);
 
   useEffect(() => {
     fetchPool();
@@ -132,11 +143,11 @@ export default function NannyPoolExplorer({
           <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2.5">
             <span>
               {language === "es"
-                ? "Pool de Cuidadoras y Asistentes Disponibles"
-                : "Verified Caregiver Talent Pool"}
+                ? "Pool de Candidatos/as Disponibles"
+                : "Verified Caregiver Candidates Pool"}
             </span>
             <span className="text-xs sm:text-sm font-bold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
-              {filteredPool.length} {language === "es" ? "perfiles" : "profiles"}
+              {filteredPool.length} {language === "es" ? "candidatos/as" : "candidates"}
             </span>
           </h2>
           <p className="text-xs sm:text-sm text-slate-600 mt-1 max-w-2xl">

@@ -20,6 +20,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const {
+      campaignId,
       name,
       roleTarget,
       targetChildren,
@@ -42,6 +43,7 @@ export async function POST(req: NextRequest) {
 
     const candidate = await createCandidate({
       userId: user.id,
+      campaignId: campaignId?.trim() || undefined,
       name: name.trim(),
       roleTarget: roleTarget?.trim() || defaultRole,
       targetChildren,
